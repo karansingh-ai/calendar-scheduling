@@ -1,0 +1,44 @@
+# Production-style stack: the app plus PostgreSQL.
+#   cp .env.example .env   # then set APP_URL, ENCRYPTION_KEY and POSTGRES_PASSWORD
+#   docker compose up -d
+services:
+  app:
+    build: .
+    # Or use a published image instead of building:
+    # image: ghcr.io/<owner>/<repo>:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://scheduler:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/scheduler
+      PORT: "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scheduler
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: scheduler
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler -d scheduler"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Optional: catch outgoing email in a local inbox at http://localhost:8025
+  # (set SMTP_URL=smtp://mailpit:1025 in .env and run `docker compose --profile mail up -d`).
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: ["mail"]
+    ports:
+      - "8025:8025"
+
+volumes:
+  pgdata:

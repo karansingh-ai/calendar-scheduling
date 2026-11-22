@@ -1,3 +1,4 @@
+import postgres from "postgres";
 import { createApp } from "../app";
 import { bootstrap } from "../bootstrap";
 import { MemoryMailer } from "../lib/mailer";
@@ -23,8 +24,15 @@ export async function makeTestApp(env: Record<string, string> = {}) {
     return new Response("ok", { status: 200 });
   }) as typeof fetch;
 
+  // Set TEST_DATABASE_URL=postgres://... to run the suite against a real PostgreSQL server (it is wiped first).
+  const databaseUrl = process.env.TEST_DATABASE_URL ?? "memory://";
+  if (databaseUrl.startsWith("postgres")) {
+    const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
+    await sql.unsafe("drop schema if exists public cascade; create schema public; drop schema if exists drizzle cascade;");
+    await sql.end();
+  }
   const { ctx, database } = await bootstrap({
-    env: { NODE_ENV: "test", DATABASE_URL: "memory://", APP_URL, ...env },
+    env: { NODE_ENV: "test", DATABASE_URL: databaseUrl, APP_URL, ...env },
     mailer,
     fetch: fakeFetch,
   });

@@ -73,6 +73,7 @@ connectionRoutes.post("/ics", async (c) => {
 
 connectionRoutes.post("/:id/sync", async (c) => {
   const ctx = c.get("ctx");
+  if (!z.string().uuid().safeParse(c.req.param("id")).success) throw notFound();
   const [conn] = await ctx.db
     .select()
     .from(calendarConnections)

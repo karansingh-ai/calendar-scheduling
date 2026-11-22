@@ -51,15 +51,17 @@ const fields = {
   dailyLimit: z.number().int().min(1).max(200).nullable(),
   weeklyLimit: z.number().int().min(1).max(1000).nullable(),
   seats: z.number().int().min(2).max(1000).nullable(),
-  location: z.object({
-    type: z.enum(["google_meet", "microsoft_teams", "link", "phone", "in_person", "custom"]),
-    value: z.string().max(1000).optional(),
-  }),
+  location: z
+    .object({
+      type: z.enum(["google_meet", "microsoft_teams", "link", "phone", "in_person", "custom"]),
+      value: z.string().max(1000).optional(),
+    })
+    .refine((l) => l.type !== "link" || !l.value || /^https?:\/\//i.test(l.value), "Meeting links must start with http:// or https://"),
   questions: z.array(questionSchema).max(25),
   reminderMinutes: z.array(z.number().int().min(5).max(60 * 24 * 14)).max(5),
   rrStrategy: z.enum(["maximize_availability", "equal_distribution"]),
   rrMaxImbalance: z.number().int().min(1).max(100).nullable(),
-  redirectUrl: z.string().url().max(2000).nullable(),
+  redirectUrl: z.string().url().max(2000).refine((u) => /^https?:\/\//i.test(u), "Use an http(s) URL").nullable(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   hidden: z.boolean(),
   active: z.boolean(),
@@ -96,7 +98,11 @@ const updateSchema = z.object(fields).partial();
 
 type HostInput = z.infer<typeof hostSchema>;
 
-async function validateHosts(db: Db, hosts: HostInput[], teamId: string | null) {
+async function validateHosts(db: Db, hosts: HostInput[], teamId: string | null, actor?: { id: string; admin: boolean; ownerUserId: string | null }) {
+  // People's time is only bookable with consent: outside a team, only admins can add other hosts.
+  if (!teamId && actor && !actor.admin && hosts.some((h) => h.userId !== actor.ownerUserId)) {
+    throw forbidden("To schedule other people, create the event type under a team they belong to");
+  }
   const ids = [...new Set(hosts.map((h) => h.userId))];
   if (ids.length !== hosts.length) throw badRequest("Each host can only be listed once");
   if (ids.length === 0) return;
@@ -202,8 +208,8 @@ eventTypeRoutes.post("/", async (c) => {
     throw forbidden("Only team managers and admins can create team event types");
   }
   const hosts = body.hosts ?? [];
-  await validateHosts(db, hosts, teamId);
   const ownerUserId = teamId ? null : user.id;
+  await validateHosts(db, hosts, teamId, { id: user.id, admin: isAdmin(user), ownerUserId });
   const hostCount = hosts.length || (ownerUserId ? 1 : 0);
   checkKindRules({ kind: body.kind, seats: body.seats ?? null, ownerUserId }, hostCount);
   const { hosts: _h, teamId: _t, ...values } = body;
@@ -240,7 +246,7 @@ eventTypeRoutes.patch("/:id", async (c) => {
   const body = await parseBody(c, updateSchema);
   if (body.teamId !== undefined && body.teamId !== et.teamId) throw badRequest("Moving an event type between owners is not supported yet");
   const { hosts, teamId: _t, ...values } = body;
-  if (hosts) await validateHosts(db, hosts, et.teamId);
+  if (hosts) await validateHosts(db, hosts, et.teamId, { id: user.id, admin: isAdmin(user), ownerUserId: et.ownerUserId });
   const next = { ...et, ...values };
   const hostCount = hosts ? hosts.length || (et.ownerUserId ? 1 : 0) : loaded.hosts.length;
   checkKindRules(next, hostCount);

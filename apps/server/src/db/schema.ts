@@ -47,6 +47,8 @@ export const users = pgTable(
     uniqueIndex("users_email_idx").on(t.email),
     uniqueIndex("users_username_idx").on(t.username),
     uniqueIndex("users_oidc_subject_idx").on(t.oidcSubject),
+    // Exactly one owner per deployment.
+    uniqueIndex("users_single_owner_idx").on(t.role).where(sql`${t.role} = 'owner'`),
   ],
 );
 

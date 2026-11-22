@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { hmacSha256Hex } from "./lib/crypto";
+import { resolveSsoUser, safeReturnTo } from "./routes/auth";
 import { ALWAYS_OPEN, dayStart, makeTestApp, type TestClient } from "./test/helpers";
 
 type T = Awaited<ReturnType<typeof makeTestApp>>;
@@ -304,6 +305,74 @@ describe("team scheduling", () => {
     const list = await owner.get("/api/v1/event-types");
     const ownerEvent = list.body.eventTypes.find((e: { slug: string }) => e.slug === "intro-call");
     expect((await bob.client.patch(`/api/v1/event-types/${ownerEvent.id}`, { title: "Hacked" })).status).toBe(404);
+  });
+
+  it("members can only put other people on team event types", async () => {
+    const other = await bob.client.post("/api/v1/event-types", { title: "Borrowed calendar", kind: "collective", hosts: [{ userId: bob.id }, { userId: alice.id }] });
+    expect(other.status).toBe(403);
+    const own = await bob.client.post("/api/v1/event-types", { title: "Bob solo", hosts: [{ userId: bob.id }] });
+    expect(own.status).toBe(201);
+    // Team managers schedule teammates through the team instead.
+    const viaTeam = await alice.client.post("/api/v1/event-types", { title: "Team pair", kind: "collective", teamId, hosts: [{ userId: bob.id }, { userId: alice.id }] });
+    expect(viaTeam.status).toBe(201);
+  });
+
+  it("rejects script URLs in links and redirects", async () => {
+    const badLink = await owner.post("/api/v1/event-types", { title: "Bad link", location: { type: "link", value: "javascript:alert(1)" } });
+    expect(badLink.status).toBe(400);
+    const badRedirect = await owner.post("/api/v1/event-types", { title: "Bad redirect", redirectUrl: "javascript:alert(1)" });
+    expect(badRedirect.status).toBe(400);
+    expect((await owner.patch("/api/v1/admin/org", { logoUrl: "javascript:alert(1)" })).status).toBe(400);
+  });
+
+  it("changing a password signs out other sessions", async () => {
+    const laptop = t.client();
+    expect((await laptop.post("/api/auth/login", { email: "bob@acme.test", password: "correct horse battery" })).status).toBe(200);
+    const change = await bob.client.post("/api/auth/password", { currentPassword: "correct horse battery", newPassword: "another long passphrase" });
+    expect(change.status).toBe(200);
+    expect((await laptop.get("/api/v1/me")).status).toBe(401);
+    expect((await bob.client.get("/api/v1/me")).status).toBe(200);
+  });
+
+  it("transfers ownership and keeps a single owner", async () => {
+    const me = await owner.get("/api/v1/me");
+    const ownerId = me.body.user.id as string;
+    expect((await owner.patch(`/api/v1/admin/users/${alice.id}`, { role: "owner" })).status).toBe(200);
+    const users = (await alice.client.get("/api/v1/admin/users")).body.users as { id: string; role: string }[];
+    expect(users.filter((u) => u.role === "owner").map((u) => u.id)).toEqual([alice.id]);
+    expect((await alice.client.patch(`/api/v1/admin/users/${ownerId}`, { role: "owner" })).status).toBe(200);
+    expect((await owner.get("/api/v1/me")).body.user.role).toBe("owner");
+  });
+});
+
+describe("single sign-on account matching", () => {
+  it("links an unlinked account by email, then matches by subject", async () => {
+    const first = await resolveSsoUser(t.ctx, { subject: "idp|alice", email: "Alice@acme.test", name: "Alice" });
+    expect("user" in first && first.user.email).toBe("alice@acme.test");
+    const again = await resolveSsoUser(t.ctx, { subject: "idp|alice", email: "alice.renamed@acme.test", name: "Alice" });
+    expect("user" in again && again.user.email).toBe("alice@acme.test");
+  });
+
+  it("never re-links an account that belongs to another SSO identity", async () => {
+    const res = await resolveSsoUser(t.ctx, { subject: "idp|someone-new", email: "alice@acme.test", name: "Not Alice" });
+    expect(res).toEqual({ error: "sso_account_conflict" });
+    const audit = await owner.get("/api/v1/admin/audit?action=auth.login_failed");
+    expect(audit.body.entries.some((e: { metadata: { reason?: string } }) => e.metadata.reason === "subject_mismatch")).toBe(true);
+  });
+
+  it("auto-provisions new people", async () => {
+    const res = await resolveSsoUser(t.ctx, { subject: "idp|newhire", email: "newhire@acme.test", name: "New Hire" });
+    expect("user" in res && res.user.role).toBe("member");
+  });
+});
+
+describe("redirect safety", () => {
+  it("only returns to same-site paths after sign-in", () => {
+    expect(safeReturnTo("/app/bookings")).toBe("/app/bookings");
+    expect(safeReturnTo("//evil.example")).toBe("/app");
+    expect(safeReturnTo("/\\evil.example")).toBe("/app");
+    expect(safeReturnTo("https://evil.example")).toBe("/app");
+    expect(safeReturnTo(undefined)).toBe("/app");
   });
 });
 

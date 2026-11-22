@@ -1,5 +1,5 @@
 {
-  "id": "bcb6bb98-2d90-4ff5-ac24-35179a735d61",
+  "id": "c6071a84-5042-46bf-bea8-7201390de190",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1864,6 +1864,22 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "users_single_owner_idx": {
+          "name": "users_single_owner_idx",
+          "columns": [
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"users\".\"role\" = 'owner'",
           "concurrently": false,
           "method": "btree",
           "with": {}

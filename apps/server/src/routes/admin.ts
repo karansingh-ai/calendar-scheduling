@@ -53,6 +53,7 @@ adminRoutes.post("/users", async (c) => {
 
 adminRoutes.post("/users/:id/invite", async (c) => {
   const ctx = c.get("ctx");
+  if (!z.string().uuid().safeParse(c.req.param("id")).success) throw notFound();
   const [user] = await ctx.db.select().from(users).where(eq(users.id, c.req.param("id")));
   if (!user) throw notFound("User not found");
   const invite = await issueInvite(ctx, user, currentUser(c).name);
@@ -123,7 +124,7 @@ adminRoutes.patch("/org", async (c) => {
     z.object({
       name: z.string().min(1).max(120).optional(),
       brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-      logoUrl: z.string().url().max(2000).nullable().optional(),
+      logoUrl: z.string().url().max(2000).refine((u) => /^https?:\/\//i.test(u), "Use an http(s) URL").nullable().optional(),
     }),
   );
   await getOrgSettings(db);
@@ -193,6 +194,7 @@ teamRoutes.get("/:id", async (c) => {
 teamRoutes.patch("/:id", async (c) => {
   const { db } = c.get("ctx");
   const id = c.req.param("id");
+  if (!z.string().uuid().safeParse(id).success) throw notFound();
   if (!(await canManageTeam(c, id))) throw forbidden();
   const body = await parseBody(c, z.object({ name: z.string().min(1).max(120).optional(), slug: z.string().regex(SLUG_RE).optional() }));
   try {
@@ -207,6 +209,7 @@ teamRoutes.patch("/:id", async (c) => {
 teamRoutes.put("/:id/members", async (c) => {
   const { db } = c.get("ctx");
   const id = c.req.param("id");
+  if (!z.string().uuid().safeParse(id).success) throw notFound();
   if (!(await canManageTeam(c, id))) throw forbidden();
   const body = await parseBody(c, z.object({ members: z.array(z.object({ userId: z.string().uuid(), role: z.enum(["manager", "member"]).default("member") })).max(1000) }));
   await db.transaction(async (tx) => {
@@ -221,6 +224,7 @@ teamRoutes.delete("/:id", async (c) => {
   const { db } = c.get("ctx");
   if (!isAdmin(currentUser(c))) throw forbidden("Only admins can delete teams");
   const id = c.req.param("id");
+  if (!z.string().uuid().safeParse(id).success) throw notFound();
   const [team] = await db.delete(teams).where(eq(teams.id, id)).returning();
   if (!team) throw notFound("Team not found");
   await audit(db, actor(c), "team.deleted", { type: "team", id }, { name: team.name });

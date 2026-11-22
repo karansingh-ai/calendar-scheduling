@@ -1,10 +1,11 @@
-import { and, eq, gt, isNull, lt } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, ne } from "drizzle-orm";
+import { getCookie } from "hono/cookie";
 import { Hono } from "hono";
 import { z } from "zod";
 import { isValidTimeZone } from "@scheduler/core";
 import { buildOidcLogin, completeOidcLogin } from "../auth/oidc";
-import { actor, clientIp, createSession, currentUser, destroySession, type AppEnv } from "../auth/middleware";
-import { authTokens, oauthStates, orgSettings, users } from "../db/schema";
+import { actor, clientIp, createSession, currentUser, destroySession, SESSION_COOKIE, type AppEnv } from "../auth/middleware";
+import { authTokens, oauthStates, orgSettings, sessions, users } from "../db/schema";
 import { hashPassword, sha256, verifyPassword } from "../lib/crypto";
 import { badRequest, conflict, forbidden, HttpError, notFound, parseBody } from "../lib/http";
 import { RateLimiter } from "../lib/rateLimit";
@@ -14,6 +15,12 @@ import { createUser, getOrgSettings, publicUser, userCount } from "../services/u
 const loginLimiter = new RateLimiter(10, 15 * 60_000);
 const password = z.string().min(10, "Use at least 10 characters").max(200);
 const timezone = z.string().refine(isValidTimeZone, "Unknown time zone");
+
+/** Only same-site paths: "/app/x" is fine, "//evil.com" and "/\\evil.com" are not. */
+export function safeReturnTo(value: string | undefined): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return "/app";
+  return value;
+}
 
 export const authRoutes = new Hono<AppEnv>();
 
@@ -40,13 +47,19 @@ authRoutes.post("/setup", async (c) => {
     z.object({ name: z.string().min(1).max(120), email: z.string().email(), password, timezone, orgName: z.string().min(1).max(120) }),
   );
   if ((await userCount(ctx.db)) > 0) throw conflict("Setup is already complete", "setup_complete");
-  const user = await createUser(ctx.db, {
-    email: body.email,
-    name: body.name,
-    role: "owner",
-    timezone: body.timezone,
-    passwordHash: await hashPassword(body.password),
-  });
+  let user;
+  try {
+    user = await createUser(ctx.db, {
+      email: body.email,
+      name: body.name,
+      role: "owner",
+      timezone: body.timezone,
+      passwordHash: await hashPassword(body.password),
+    });
+  } catch {
+    // The unique owner index rejects a second concurrent setup.
+    throw conflict("Setup is already complete", "setup_complete");
+  }
   await getOrgSettings(ctx.db);
   await ctx.db.update(orgSettings).set({ name: body.orgName, updatedAt: new Date() }).where(eq(orgSettings.id, 1));
   await createSession(c, user.id);
@@ -86,7 +99,7 @@ authRoutes.get("/oidc/start", async (c) => {
     provider: "oidc",
     codeVerifier: login.codeVerifier,
     nonce: login.nonce,
-    returnTo: c.req.query("returnTo")?.startsWith("/") ? c.req.query("returnTo") : "/app",
+    returnTo: safeReturnTo(c.req.query("returnTo")),
     expiresAt: new Date(Date.now() + 10 * 60_000),
   });
   return c.redirect(login.url);
@@ -113,22 +126,52 @@ authRoutes.get("/oidc/callback", async (c) => {
     return c.redirect("/login?error=sso_failed");
   }
 
-  let [user] = await ctx.db.select().from(users).where(eq(users.oidcSubject, identity.subject));
-  if (!user) [user] = await ctx.db.select().from(users).where(eq(users.email, identity.email));
-  if (!user) {
-    const domain = identity.email.split("@")[1];
-    const domainOk = ctx.config.allowedEmailDomains.length === 0 || ctx.config.allowedEmailDomains.includes(domain);
-    if (!ctx.config.OIDC_AUTO_PROVISION || !domainOk) return c.redirect("/login?error=sso_not_allowed");
-    user = await createUser(ctx.db, { email: identity.email, name: identity.name, oidcSubject: identity.subject });
-    await audit(ctx.db, { userId: user.id, label: user.email, ip: clientIp(c) }, "user.provisioned", { type: "user", id: user.id }, { via: "oidc" });
-  } else if (!user.oidcSubject) {
-    await ctx.db.update(users).set({ oidcSubject: identity.subject }).where(eq(users.id, user.id));
-  }
+  const resolved = await resolveSsoUser(ctx, identity, clientIp(c));
+  if ("error" in resolved) return c.redirect(`/login?error=${resolved.error}`);
+  const user = resolved.user;
   if (user.disabledAt) return c.redirect("/login?error=account_disabled");
   await createSession(c, user.id);
   await audit(ctx.db, { userId: user.id, label: user.email, ip: clientIp(c) }, "auth.login", undefined, { method: "oidc" });
   return c.redirect(saved.returnTo ?? "/app");
 });
+
+export interface SsoIdentity {
+  subject: string;
+  email: string;
+  name: string;
+}
+
+/**
+ * Map an identity-provider login to a local account.
+ * 1. Match the IdP subject. 2. Otherwise match email, but only for accounts not linked to another subject
+ * (a reassigned address must not take over someone's account). 3. Otherwise auto-provision if allowed.
+ */
+export async function resolveSsoUser(
+  ctx: AppEnv["Variables"]["ctx"],
+  identity: SsoIdentity,
+  ip: string | null = null,
+): Promise<{ user: typeof users.$inferSelect } | { error: "sso_account_conflict" | "sso_not_allowed" }> {
+  const email = identity.email.toLowerCase();
+  const [bySubject] = await ctx.db.select().from(users).where(eq(users.oidcSubject, identity.subject));
+  if (bySubject) return { user: bySubject };
+
+  const [byEmail] = await ctx.db.select().from(users).where(eq(users.email, email));
+  if (byEmail) {
+    if (byEmail.oidcSubject && byEmail.oidcSubject !== identity.subject) {
+      await audit(ctx.db, { userId: null, label: email, ip }, "auth.login_failed", { type: "user", id: byEmail.id }, { method: "oidc", reason: "subject_mismatch" });
+      return { error: "sso_account_conflict" };
+    }
+    await ctx.db.update(users).set({ oidcSubject: identity.subject }).where(eq(users.id, byEmail.id));
+    return { user: { ...byEmail, oidcSubject: identity.subject } };
+  }
+
+  const domain = email.split("@")[1];
+  const domainOk = ctx.config.allowedEmailDomains.length === 0 || ctx.config.allowedEmailDomains.includes(domain);
+  if (!ctx.config.OIDC_AUTO_PROVISION || !domainOk) return { error: "sso_not_allowed" };
+  const user = await createUser(ctx.db, { email, name: identity.name, oidcSubject: identity.subject });
+  await audit(ctx.db, { userId: user.id, label: user.email, ip }, "user.provisioned", { type: "user", id: user.id }, { via: "oidc" });
+  return { user };
+}
 
 async function findToken(c: { get: (k: "ctx") => AppEnv["Variables"]["ctx"] }, token: string) {
   const ctx = c.get("ctx");
@@ -173,6 +216,9 @@ authRoutes.post("/password", async (c) => {
     throw new HttpError(400, "invalid_credentials", "Current password is incorrect");
   }
   await ctx.db.update(users).set({ passwordHash: await hashPassword(body.newPassword) }).where(eq(users.id, user.id));
+  // Sign out every other session.
+  const token = getCookie(c, SESSION_COOKIE);
+  await ctx.db.delete(sessions).where(and(eq(sessions.userId, user.id), token ? ne(sessions.id, sha256(token)) : undefined));
   await audit(ctx.db, actor(c), "auth.password_changed", { type: "user", id: user.id });
   return c.json({ ok: true });
 });

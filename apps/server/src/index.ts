@@ -1,9 +1,24 @@
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";
 import { bootstrap } from "./bootstrap";
 import { startWorker } from "./worker";
 
+/** Load a .env file (current directory first, then the repository root) without overriding real env vars. */
+function loadDotEnv() {
+  const here = dirname(fileURLToPath(import.meta.url));
+  for (const file of [resolve(process.cwd(), ".env"), resolve(here, "../../../.env")]) {
+    if (existsSync(file)) {
+      process.loadEnvFile(file);
+      return;
+    }
+  }
+}
+
 async function main() {
+  loadDotEnv();
   const { ctx, database } = await bootstrap();
   const { config } = ctx;
   const app = createApp(ctx);

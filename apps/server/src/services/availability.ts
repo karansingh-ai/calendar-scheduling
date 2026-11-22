@@ -115,7 +115,7 @@ async function fairnessStats(db: Db, eventTypeId: string, userIds: string[]) {
   const rows = await db
     .select({
       userId: bookings.hostUserId,
-      count: sql<number>`count(*) filter (where ${bookings.createdAt} >= ${since})::int`,
+      count: sql<number>`count(*) filter (where ${bookings.createdAt} >= ${since.toISOString()}::timestamptz)::int`,
       last: sql<Date | null>`max(${bookings.createdAt})`,
     })
     .from(bookings)

@@ -1,0 +1,13 @@
+import { defineConfig } from "tsup";
+
+export default defineConfig({
+  entry: ["src/index.ts"],
+  format: ["esm"],
+  target: "node20",
+  platform: "node",
+  outDir: "dist",
+  clean: true,
+  sourcemap: true,
+  // Bundle the workspace package (shipped as TypeScript); keep npm dependencies external.
+  noExternal: ["@scheduler/core"],
+});
