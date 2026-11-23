@@ -600,3 +600,40 @@ describe("rescheduling after the event changes", () => {
     expect((await book(et.id, slots[2].start, "new@example.com")).status).toBe(400);
   });
 });
+
+describe("Google sign-in", () => {
+  const google = { GOOGLE_CLIENT_ID: "gid.apps.googleusercontent.com", GOOGLE_CLIENT_SECRET: "gsecret" };
+
+  it("reuses the Google calendar client for sign-in", () => {
+    const c = loadConfig({ ...google, GOOGLE_SIGN_IN: "true" });
+    expect(c.oidcEnabled).toBe(true);
+    expect(c.googleEnabled).toBe(true);
+    expect(c.OIDC_ISSUER).toBe("https://accounts.google.com");
+    expect(c.OIDC_CLIENT_ID).toBe(google.GOOGLE_CLIENT_ID);
+    expect(c.OIDC_CLIENT_SECRET).toBe(google.GOOGLE_CLIENT_SECRET);
+    expect(c.oidcProvider).toBe("google");
+    expect(c.OIDC_DISPLAY_NAME).toBe("Google");
+  });
+
+  it("is off unless asked for, even with Google calendar keys", () => {
+    const c = loadConfig(google);
+    expect(c.oidcEnabled).toBe(false);
+    expect(c.OIDC_DISPLAY_NAME).toBe("SSO");
+  });
+
+  it("recognizes a manual Google OIDC setup too", () => {
+    const c = loadConfig({ OIDC_ISSUER: "https://accounts.google.com/", OIDC_CLIENT_ID: "x", OIDC_CLIENT_SECRET: "y" });
+    expect(c.oidcProvider).toBe("google");
+    expect(loadConfig({ OIDC_ISSUER: "https://acme.okta.com", OIDC_CLIENT_ID: "x" }).oidcProvider).toBe("generic");
+  });
+
+  it("explains misconfiguration", () => {
+    expect(() => loadConfig({ GOOGLE_SIGN_IN: "true" })).toThrow(/GOOGLE_CLIENT_ID/);
+    expect(() => loadConfig({ ...google, GOOGLE_SIGN_IN: "true", OIDC_ISSUER: "https://acme.okta.com", OIDC_CLIENT_ID: "x" })).toThrow(/not both/);
+  });
+
+  it("tells the web app which button to show", async () => {
+    const status = await t.client().get("/api/auth/status");
+    expect(status.body.oidc).toEqual({ enabled: false, name: "SSO", provider: "generic" });
+  });
+});

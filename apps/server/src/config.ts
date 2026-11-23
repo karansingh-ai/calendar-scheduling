@@ -33,7 +33,13 @@ const schema = z.object({
   OIDC_ISSUER: optionalString,
   OIDC_CLIENT_ID: optionalString,
   OIDC_CLIENT_SECRET: optionalString,
-  OIDC_DISPLAY_NAME: z.string().default("SSO"),
+  /** Button label: "Continue with ...". Defaults to "Google" for Google sign-in, otherwise "SSO". */
+  OIDC_DISPLAY_NAME: optionalString,
+  /**
+   * "Sign in with Google" using the GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET calendar client, so the same
+   * Google OAuth client serves both. Shorthand for OIDC_ISSUER=https://accounts.google.com.
+   */
+  GOOGLE_SIGN_IN: bool.default(false),
   /** Create accounts on first SSO login. */
   OIDC_AUTO_PROVISION: bool.default(true),
   /**
@@ -71,7 +77,12 @@ const schema = z.object({
   SESSION_DAYS: z.coerce.number().int().positive().default(30),
 });
 
-export type Config = z.infer<typeof schema> & {
+export const GOOGLE_ISSUER = "https://accounts.google.com";
+
+export type Config = Omit<z.infer<typeof schema>, "OIDC_DISPLAY_NAME"> & {
+  OIDC_DISPLAY_NAME: string;
+  /** Which kind of SSO is configured; "google" gets Google's sign-in button and account chooser. */
+  oidcProvider: "google" | "generic";
   googleEnabled: boolean;
   microsoftEnabled: boolean;
   oidcEnabled: boolean;
@@ -94,8 +105,22 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     }
     encryptionKey = "insecure-development-key-change-me-in-production";
   }
+  if (c.GOOGLE_SIGN_IN) {
+    if (!c.GOOGLE_CLIENT_ID || !c.GOOGLE_CLIENT_SECRET) {
+      throw new Error("GOOGLE_SIGN_IN=true needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (see docs/integrations.md)");
+    }
+    if (c.OIDC_ISSUER && c.OIDC_ISSUER.replace(/\/$/, "") !== GOOGLE_ISSUER) {
+      throw new Error("Only one single sign-on provider is supported: set GOOGLE_SIGN_IN or OIDC_ISSUER, not both");
+    }
+    c.OIDC_ISSUER = GOOGLE_ISSUER;
+    c.OIDC_CLIENT_ID = c.OIDC_CLIENT_ID ?? c.GOOGLE_CLIENT_ID;
+    c.OIDC_CLIENT_SECRET = c.OIDC_CLIENT_SECRET ?? c.GOOGLE_CLIENT_SECRET;
+  }
+  const oidcProvider = c.OIDC_ISSUER?.replace(/\/$/, "") === GOOGLE_ISSUER ? "google" : "generic";
   return {
     ...c,
+    OIDC_DISPLAY_NAME: c.OIDC_DISPLAY_NAME ?? (oidcProvider === "google" ? "Google" : "SSO"),
+    oidcProvider,
     APP_URL: c.APP_URL.replace(/\/$/, ""),
     ENCRYPTION_KEY: encryptionKey,
     googleEnabled: Boolean(c.GOOGLE_CLIENT_ID && c.GOOGLE_CLIENT_SECRET),

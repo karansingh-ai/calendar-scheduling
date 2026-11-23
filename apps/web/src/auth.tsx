@@ -7,7 +7,7 @@ export interface Status {
   brandColor: string;
   setupRequired: boolean;
   passwordLogin: boolean;
-  oidc: { enabled: boolean; name: string };
+  oidc: { enabled: boolean; name: string; provider: "google" | "generic" };
   integrations: { google: boolean; microsoft: boolean; ics: boolean };
   user: User | null;
 }

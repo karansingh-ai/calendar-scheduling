@@ -34,7 +34,7 @@ authRoutes.get("/status", async (c) => {
     brandColor: org.brandColor,
     setupRequired: (await userCount(ctx.db)) === 0,
     passwordLogin: ctx.config.PASSWORD_LOGIN,
-    oidc: { enabled: ctx.config.oidcEnabled, name: ctx.config.OIDC_DISPLAY_NAME },
+    oidc: { enabled: ctx.config.oidcEnabled, name: ctx.config.OIDC_DISPLAY_NAME, provider: ctx.config.oidcProvider },
     integrations: ctx.calendars.available(),
     user: user ? publicUser(user) : null,
   });

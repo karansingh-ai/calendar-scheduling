@@ -28,7 +28,8 @@ All configuration is through environment variables. Invalid values stop the serv
 | `OIDC_ISSUER` | none | Issuer URL of your OpenID Connect provider. Enables SSO when set with `OIDC_CLIENT_ID`. |
 | `OIDC_CLIENT_ID` | none | Client ID. |
 | `OIDC_CLIENT_SECRET` | none | Client secret (omit for public clients using PKCE only). |
-| `OIDC_DISPLAY_NAME` | `SSO` | Button label: "Continue with ...". |
+| `OIDC_DISPLAY_NAME` | `SSO` (`Google` for Google) | Button label: "Continue with ...". |
+| `GOOGLE_SIGN_IN` | `false` | "Sign in with Google" using `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`. Shorthand for `OIDC_ISSUER=https://accounts.google.com`; cannot be combined with another `OIDC_ISSUER`. See [integrations](integrations.md#sign-in-with-google). |
 | `OIDC_AUTO_PROVISION` | `true` | Create accounts on first SSO sign-in. When false, only invited users can sign in. |
 | `ALLOWED_EMAIL_DOMAINS` | none | Comma-separated domains allowed to sign in with SSO (linking and auto-provisioning), e.g. `acme.com,acme.io`. |
 | `OIDC_TRUST_UNVERIFIED_EMAIL` | `false` | Accept SSO emails the provider does not mark `email_verified: true`. Only for a single-tenant provider you control (for example Entra ID with a tenant-specific issuer). |

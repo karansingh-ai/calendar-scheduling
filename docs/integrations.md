@@ -26,13 +26,22 @@ Matching by email and creating accounts both trust the email address, so both re
 - **A verified email.** The ID token (or userinfo response) must include `email_verified: true`. Google, Okta, Keycloak and Auth0 send it. Microsoft Entra ID does not; with a tenant-specific issuer (not `common` or `organizations`) you can set `OIDC_TRUST_UNVERIFIED_EMAIL=true`.
 - **An allowed domain**, when `ALLOWED_EMAIL_DOMAINS` is set.
 
-**Open sign-up with Google accounts:** with `OIDC_ISSUER=https://accounts.google.com`, `OIDC_AUTO_PROVISION=true` and no `ALLOWED_EMAIL_DOMAINS`, anyone with a Google account can create a member account. Members can see the user directory (names and emails), so restrict domains for a company deployment.
+## Sign in with Google
+
+Google sign-in uses the same OAuth client as Google Calendar, so set that up first (next section), then:
+
+1. Add a second **Authorized redirect URI** to the client: `<APP_URL>/api/auth/oidc/callback`.
+2. Set `GOOGLE_SIGN_IN=true` and restart. The login and invite pages show a **Continue with Google** button.
+
+`GOOGLE_SIGN_IN` is shorthand for `OIDC_ISSUER=https://accounts.google.com` with the Google client's ID and secret, and replaces any other OIDC provider (only one is supported at a time). Google's account chooser is always shown, so people with several Google accounts pick the right one. Invited users who sign in with Google are linked to their invite by email; the workspace owner created during setup can link Google the same way by signing in with the same address.
+
+**Who can sign in:** with `OIDC_AUTO_PROVISION=true` and no `ALLOWED_EMAIL_DOMAINS`, anyone with a Google account can create a member account. Members can see the user directory (names and emails), so for a company deployment set `ALLOWED_EMAIL_DOMAINS=yourcompany.com`, or `OIDC_AUTO_PROVISION=false` to admit invited people only. While the OAuth consent screen is in **Testing**, Google only lets the test users you list sign in; an **External** app used by anyone must be published, and because it also requests calendar scopes Google shows an "unverified app" warning (and caps it at 100 users) until the app passes verification. **Internal** (Workspace-only) apps need no verification.
 
 ## Google Calendar and Google Meet
 
 1. In Google Cloud Console, create a project and enable the **Google Calendar API**.
 2. Configure the OAuth consent screen. Choose **Internal** for a Workspace-only deployment (no Google verification needed).
-3. Create an **OAuth client ID** of type *Web application* with the redirect URI `<APP_URL>/api/integrations/google/callback`.
+3. Create an **OAuth client ID** of type *Web application* with the redirect URI `<APP_URL>/api/integrations/google/callback` (add `<APP_URL>/api/auth/oidc/callback` too for Google sign-in).
 4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` and restart.
 
 Scopes requested: `calendar.readonly` (free/busy and calendar list) and `calendar.events` (create bookings), plus `openid email`.

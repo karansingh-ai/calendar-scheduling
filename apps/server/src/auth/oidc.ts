@@ -34,6 +34,8 @@ export async function buildOidcLogin(config: Config) {
     code_challenge_method: "S256",
     state,
     nonce,
+    // Let people with several Google accounts pick which one to use instead of silently reusing the last one.
+    ...(config.oidcProvider === "google" ? { prompt: "select_account" } : {}),
   });
   return { url: url.href, state, nonce, codeVerifier };
 }
