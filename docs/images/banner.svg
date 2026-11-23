@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="t d">
+  <title id="t">Scheduler</title>
+  <desc id="d">Open-source scheduling for teams. Booking pages, round robin, calendar sync, SSO and an audit log, self-hosted.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef2ff"/>
+      <stop offset="1" stop-color="#f8fafc"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#312e81" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .title { font-size: 56px; font-weight: 700; fill: #0f172a; letter-spacing: -1px; }
+    .tag { font-size: 22px; fill: #334155; }
+    .pill { font-size: 15px; font-weight: 600; fill: #3730a3; }
+    .small { font-size: 13px; fill: #64748b; }
+    .day { font-size: 13px; fill: #94a3b8; text-anchor: middle; }
+    .open { font-size: 13px; font-weight: 700; fill: #4338ca; text-anchor: middle; }
+    .slot { font-size: 14px; font-weight: 600; fill: #4338ca; text-anchor: middle; }
+  </style>
+  <rect width="1200" height="360" rx="24" fill="url(#bg)"/>
+
+  <!-- Logo + text -->
+  <rect x="64" y="64" width="64" height="64" rx="16" fill="#4f46e5"/>
+  <g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round">
+    <rect x="80" y="82" width="32" height="30" rx="5"/>
+    <line x1="80" y1="92" x2="112" y2="92"/>
+    <line x1="89" y1="76" x2="89" y2="86"/>
+    <line x1="103" y1="76" x2="103" y2="86"/>
+  </g>
+  <circle cx="96" cy="102" r="3.5" fill="#fff"/>
+  <text x="148" y="117" class="title">Scheduler</text>
+  <text x="64" y="178" class="tag">Open-source scheduling for teams.</text>
+  <text x="64" y="208" class="tag">Self-host it next to your identity provider, in your own region.</text>
+
+  <g>
+    <rect x="64" y="244" width="146" height="36" rx="18" fill="#e0e7ff"/>
+    <text x="137" y="267" class="pill" text-anchor="middle">Booking pages</text>
+    <rect x="222" y="244" width="174" height="36" rx="18" fill="#e0e7ff"/>
+    <text x="309" y="267" class="pill" text-anchor="middle">Team round robin</text>
+    <rect x="408" y="244" width="152" height="36" rx="18" fill="#e0e7ff"/>
+    <text x="484" y="267" class="pill" text-anchor="middle">Calendar sync</text>
+    <rect x="64" y="292" width="180" height="36" rx="18" fill="#e0e7ff"/>
+    <text x="154" y="315" class="pill" text-anchor="middle">SSO + audit log</text>
+    <rect x="256" y="292" width="186" height="36" rx="18" fill="#e0e7ff"/>
+    <text x="349" y="315" class="pill" text-anchor="middle">Webhooks + REST API</text>
+    <rect x="454" y="292" width="106" height="36" rx="18" fill="#e0e7ff"/>
+    <text x="507" y="315" class="pill" text-anchor="middle">Apache-2.0</text>
+  </g>
+
+  <!-- Booking widget illustration -->
+  <g filter="url(#shadow)">
+    <rect x="680" y="44" width="456" height="272" rx="18" fill="#ffffff" stroke="#e2e8f0"/>
+  </g>
+  <text x="708" y="82" class="small">Jordan Lee</text>
+  <text x="708" y="108" style="font-size:20px;font-weight:700;fill:#0f172a">Intro call</text>
+  <text x="708" y="132" class="small">30 min · Google Meet</text>
+
+  <g>
+    <text x="722" y="170" class="day">M</text><text x="758" y="170" class="day">T</text><text x="794" y="170" class="day">W</text>
+    <text x="830" y="170" class="day">T</text><text x="866" y="170" class="day">F</text><text x="902" y="170" class="day">S</text><text x="938" y="170" class="day">S</text>
+    <text x="722" y="202" class="day">16</text><text x="758" y="202" class="day">17</text><text x="794" y="202" class="day">18</text>
+    <text x="830" y="202" class="day">19</text><text x="866" y="202" class="day">20</text><text x="902" y="202" class="day">21</text><text x="938" y="202" class="day">22</text>
+    <circle cx="722" cy="234" r="15" fill="#eef2ff"/><text x="722" y="239" class="open">23</text>
+    <circle cx="758" cy="234" r="15" fill="#4f46e5"/><text x="758" y="239" class="open" style="fill:#fff">24</text>
+    <circle cx="794" cy="234" r="15" fill="#eef2ff"/><text x="794" y="239" class="open">25</text>
+    <circle cx="830" cy="234" r="15" fill="#eef2ff"/><text x="830" y="239" class="open">26</text>
+    <circle cx="866" cy="234" r="15" fill="#eef2ff"/><text x="866" y="239" class="open">27</text>
+    <text x="902" y="239" class="day">28</text><text x="938" y="239" class="day">29</text>
+    <circle cx="722" cy="272" r="15" fill="#eef2ff"/><text x="722" y="277" class="open">30</text>
+  </g>
+
+  <g>
+    <rect x="976" y="80" width="132" height="38" rx="8" fill="#fff" stroke="#a5b4fc"/><text x="1042" y="104" class="slot">9:00 AM</text>
+    <rect x="976" y="128" width="132" height="38" rx="8" fill="#fff" stroke="#a5b4fc"/><text x="1042" y="152" class="slot">9:30 AM</text>
+    <rect x="976" y="176" width="132" height="38" rx="8" fill="#4f46e5"/><text x="1042" y="200" class="slot" style="fill:#fff">10:30 AM ✓</text>
+    <rect x="976" y="224" width="132" height="38" rx="8" fill="#fff" stroke="#a5b4fc"/><text x="1042" y="248" class="slot">11:00 AM</text>
+    <rect x="976" y="272" width="132" height="30" rx="8" fill="#fff" stroke="#c7d2fe"/><text x="1042" y="292" class="slot" style="fill:#818cf8">1:00 PM</text>
+  </g>
+</svg>

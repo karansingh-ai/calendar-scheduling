@@ -13,7 +13,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   HOST: z.string().default("0.0.0.0"),
   PORT: z.coerce.number().int().positive().default(3000),
-  /** Public base URL, used in links, OAuth redirects and emails. */
+  /** Public base URL, used in links, OAuth redirects and emails. Defaults to RENDER_EXTERNAL_URL on Render. */
   APP_URL: z.string().url().default("http://localhost:3000"),
   /** Product name shown in the UI and emails. Companies can white-label here. */
   APP_NAME: z.string().default("Scheduler"),
@@ -92,7 +92,8 @@ export type Config = Omit<z.infer<typeof schema>, "OIDC_DISPLAY_NAME"> & {
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
-  const parsed = schema.safeParse(env);
+  // On Render the public URL is known only after the service is created, and Render provides it at runtime.
+  const parsed = schema.safeParse(env.APP_URL || !env.RENDER_EXTERNAL_URL ? env : { ...env, APP_URL: env.RENDER_EXTERNAL_URL });
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Invalid configuration:\n${issues}`);

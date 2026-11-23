@@ -1,0 +1,16 @@
+{
+  // Ready-to-run environment for GitHub Codespaces ("Open in GitHub Codespaces" in the README) or VS Code Dev Containers.
+  "name": "Scheduler",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Scheduler", "onAutoForward": "openBrowser" }
+  },
+  "postCreateCommand": "npm ci && npm run build",
+  "postAttachCommand": "bash .devcontainer/start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["bradlc.vscode-tailwindcss", "vitest.explorer"]
+    }
+  }
+}

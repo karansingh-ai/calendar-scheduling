@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="272" viewBox="0 0 1200 272" role="img" aria-labelledby="t d">
+  <title id="t">How a booking happens</title>
+  <desc id="d">The invitee picks a time, the engine checks every rule, the slot is re-checked inside a locked database transaction, then calendar events, emails and webhooks go out.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#818cf8"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .n { font-size: 16px; font-weight: 700; fill: #fff; text-anchor: middle; }
+    .h { font-size: 18px; font-weight: 700; fill: #0f172a; }
+    .t { font-size: 14px; fill: #475569; }
+    .line { stroke: #818cf8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  </style>
+  <rect width="1200" height="272" rx="24" fill="#f8fafc"/>
+
+  <g>
+    <rect x="40" y="48" width="250" height="184" rx="16" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="76" cy="86" r="18" fill="#4f46e5"/><text x="76" y="92" class="n">1</text>
+    <text x="62" y="140" class="h">Invitee picks a time</text>
+    <text x="62" y="168" class="t">Shown in their own time</text>
+    <text x="62" y="188" class="t">zone, on any device or</text>
+    <text x="62" y="208" class="t">embedded on your site.</text>
+  </g>
+  <g>
+    <rect x="330" y="48" width="250" height="184" rx="16" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="366" cy="86" r="18" fill="#4f46e5"/><text x="366" y="92" class="n">2</text>
+    <text x="352" y="140" class="h">Every rule is checked</text>
+    <text x="352" y="168" class="t">Working hours, calendars,</text>
+    <text x="352" y="188" class="t">buffers, notice, limits,</text>
+    <text x="352" y="208" class="t">seats and fairness.</text>
+  </g>
+  <g>
+    <rect x="620" y="48" width="250" height="184" rx="16" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="656" cy="86" r="18" fill="#4f46e5"/><text x="656" y="92" class="n">3</text>
+    <text x="642" y="140" class="h">No double booking</text>
+    <text x="642" y="168" class="t">The slot is re-checked in a</text>
+    <text x="642" y="188" class="t">locked transaction, so two</text>
+    <text x="642" y="208" class="t">people can't both get it.</text>
+  </g>
+  <g>
+    <rect x="910" y="48" width="250" height="184" rx="16" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="946" cy="86" r="18" fill="#16a34a"/><text x="946" y="92" class="n">✓</text>
+    <text x="932" y="140" class="h">Everyone is notified</text>
+    <text x="932" y="168" class="t">Calendar event + video link,</text>
+    <text x="932" y="188" class="t">emails with .ics invites,</text>
+    <text x="932" y="208" class="t">webhooks, audit log entry.</text>
+  </g>
+
+  <path class="line" d="M292,138 L326,138"/>
+  <path class="line" d="M582,138 L616,138"/>
+  <path class="line" d="M872,138 L906,138"/>
+</svg>

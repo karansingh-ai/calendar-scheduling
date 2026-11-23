@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="t d">
+  <title id="t">Scheduler architecture</title>
+  <desc id="d">Browsers and API clients talk to one Node.js process that serves the web app, the REST API and a background worker. It stores data in PostgreSQL or an embedded database and connects out to calendars, SSO, email and webhooks.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .h { font-size: 18px; font-weight: 700; fill: #0f172a; }
+    .t { font-size: 14px; fill: #334155; }
+    .m { font-size: 13px; fill: #64748b; }
+    .lbl { font-size: 12px; font-weight: 700; fill: #6366f1; letter-spacing: 1.5px; }
+    .line { stroke: #94a3b8; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+  </style>
+  <rect width="1200" height="560" rx="24" fill="#f8fafc"/>
+
+  <!-- Clients -->
+  <text x="48" y="56" class="lbl">WHO USES IT</text>
+  <g>
+    <rect x="48" y="76" width="250" height="84" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="68" y="108" class="h">Invitees</text>
+    <text x="68" y="132" class="t">Booking pages, embeds,</text>
+    <text x="68" y="150" class="t">reschedule and cancel links</text>
+  </g>
+  <g>
+    <rect x="48" y="176" width="250" height="84" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="68" y="208" class="h">Your team</text>
+    <text x="68" y="232" class="t">Dashboard: event types,</text>
+    <text x="68" y="250" class="t">availability, bookings, admin</text>
+  </g>
+  <g>
+    <rect x="48" y="276" width="250" height="84" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="68" y="308" class="h">Your systems</text>
+    <text x="68" y="332" class="t">REST API with API keys,</text>
+    <text x="68" y="350" class="t">OpenAPI spec</text>
+  </g>
+
+  <!-- App -->
+  <text x="394" y="56" class="lbl">ONE CONTAINER</text>
+  <rect x="394" y="76" width="412" height="284" rx="18" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+  <text x="418" y="108" class="h">Node.js process</text>
+  <g>
+    <rect x="418" y="124" width="364" height="60" rx="12" fill="#fff" stroke="#c7d2fe"/>
+    <text x="436" y="150" class="t" style="font-weight:700">Web app</text>
+    <text x="436" y="170" class="m">React + Vite + Tailwind single-page app</text>
+  </g>
+  <g>
+    <rect x="418" y="194" width="364" height="60" rx="12" fill="#fff" stroke="#c7d2fe"/>
+    <text x="436" y="220" class="t" style="font-weight:700">API (Hono)</text>
+    <text x="436" y="240" class="m">Auth, SSO, bookings, admin, audit log</text>
+  </g>
+  <g>
+    <rect x="418" y="264" width="176" height="80" rx="12" fill="#fff" stroke="#c7d2fe"/>
+    <text x="436" y="290" class="t" style="font-weight:700">Scheduling engine</text>
+    <text x="436" y="310" class="m">Pure TypeScript:</text>
+    <text x="436" y="328" class="m">slots, limits, fairness</text>
+  </g>
+  <g>
+    <rect x="606" y="264" width="176" height="80" rx="12" fill="#fff" stroke="#c7d2fe"/>
+    <text x="624" y="290" class="t" style="font-weight:700">Job worker</text>
+    <text x="624" y="310" class="m">Emails, reminders,</text>
+    <text x="624" y="328" class="m">webhook retries</text>
+  </g>
+
+  <!-- Data -->
+  <text x="394" y="412" class="lbl">DATA</text>
+  <g>
+    <rect x="394" y="428" width="412" height="92" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="418" y="462" class="h">PostgreSQL</text>
+    <text x="418" y="486" class="t">Or the embedded database for trials (no setup).</text>
+    <text x="418" y="506" class="m">Also the job queue: no Redis to run.</text>
+  </g>
+
+  <!-- Integrations -->
+  <text x="902" y="56" class="lbl">CONNECTS TO</text>
+  <g>
+    <rect x="902" y="76" width="250" height="64" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="922" y="104" class="h">Calendars</text>
+    <text x="922" y="126" class="m">Google, Microsoft 365, ICS feeds</text>
+  </g>
+  <g>
+    <rect x="902" y="152" width="250" height="64" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="922" y="180" class="h">Single sign-on</text>
+    <text x="922" y="202" class="m">Google, Okta, Entra ID, Keycloak…</text>
+  </g>
+  <g>
+    <rect x="902" y="228" width="250" height="64" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="922" y="256" class="h">Email</text>
+    <text x="922" y="278" class="m">Any SMTP server, .ics invites</text>
+  </g>
+  <g>
+    <rect x="902" y="304" width="250" height="64" rx="14" fill="#fff" stroke="#e2e8f0"/>
+    <text x="922" y="332" class="h">Webhooks</text>
+    <text x="922" y="354" class="m">Signed, retried, logged</text>
+  </g>
+
+  <!-- Arrows -->
+  <path class="line" d="M298,118 L394,150"/>
+  <path class="line" d="M298,218 L394,218"/>
+  <path class="line" d="M298,318 L394,232"/>
+  <path class="line" d="M600,360 L600,428"/>
+  <path class="line" d="M806,170 L902,108"/>
+  <path class="line" d="M806,200 L902,184"/>
+  <path class="line" d="M806,290 L902,260"/>
+  <path class="line" d="M806,320 L902,336"/>
+</svg>

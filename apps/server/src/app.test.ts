@@ -627,6 +627,11 @@ describe("Google sign-in", () => {
     expect(loadConfig({ OIDC_ISSUER: "https://acme.okta.com", OIDC_CLIENT_ID: "x" }).oidcProvider).toBe("generic");
   });
 
+  it("uses Render's public URL when APP_URL is not set", () => {
+    expect(loadConfig({ RENDER_EXTERNAL_URL: "https://scheduler-abc.onrender.com" }).APP_URL).toBe("https://scheduler-abc.onrender.com");
+    expect(loadConfig({ APP_URL: "https://cal.acme.com", RENDER_EXTERNAL_URL: "https://x.onrender.com" }).APP_URL).toBe("https://cal.acme.com");
+  });
+
   it("explains misconfiguration", () => {
     expect(() => loadConfig({ GOOGLE_SIGN_IN: "true" })).toThrow(/GOOGLE_CLIENT_ID/);
     expect(() => loadConfig({ ...google, GOOGLE_SIGN_IN: "true", OIDC_ISSUER: "https://acme.okta.com", OIDC_CLIENT_ID: "x" })).toThrow(/not both/);
