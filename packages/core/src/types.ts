@@ -58,7 +58,7 @@ export interface HostInput {
   weight?: number;
   /** Round robin only: bookings counted for fairness (any window the caller chooses). */
   fairnessCount?: number;
-  /** Round robin only: start time of this host's most recent booking of this event type. */
+  /** Round robin only: when this host was last assigned a booking of this event type (booking creation time). */
   lastBookedAt?: number | null;
 }
 

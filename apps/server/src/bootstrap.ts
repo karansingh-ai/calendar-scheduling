@@ -2,6 +2,7 @@ import { loadConfig, type Config } from "./config";
 import type { AppContext } from "./context";
 import { openDatabase, type Database } from "./db";
 import { Encrypter } from "./lib/crypto";
+import { defaultResolveHost, type ResolveHost } from "./lib/outbound";
 import { ConsoleMailer, SmtpMailer, type Mailer } from "./lib/mailer";
 import { CalendarService } from "./services/calendars";
 import type { FetchFn } from "./services/calendars/types";
@@ -11,6 +12,7 @@ export interface BootOptions {
   env?: Record<string, string | undefined>;
   mailer?: Mailer;
   fetch?: FetchFn;
+  resolveHost?: ResolveHost;
   migrate?: boolean;
 }
 
@@ -21,6 +23,7 @@ export async function bootstrap(opts: BootOptions = {}): Promise<{ ctx: AppConte
   if (opts.migrate !== false) await database.migrate();
   const encrypter = new Encrypter(config.ENCRYPTION_KEY!);
   const fetchFn = opts.fetch ?? fetch;
+  const resolveHost = opts.resolveHost ?? defaultResolveHost;
   const mailer = opts.mailer ?? (config.SMTP_URL ? new SmtpMailer(config.SMTP_URL, config.emailFrom) : new ConsoleMailer());
   const ctx: AppContext = {
     config,
@@ -28,7 +31,8 @@ export async function bootstrap(opts: BootOptions = {}): Promise<{ ctx: AppConte
     mailer,
     encrypter,
     fetch: fetchFn,
-    calendars: new CalendarService(database.db, config, encrypter, fetchFn),
+    resolveHost,
+    calendars: new CalendarService(database.db, config, encrypter, fetchFn, resolveHost),
   };
   return { ctx, database };
 }

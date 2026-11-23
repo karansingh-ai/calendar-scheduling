@@ -247,6 +247,20 @@ describe("computeSlots: group events", () => {
     expect(res.explanations!.find((x) => x.start === slot.start)!.hosts[0].reasons).toContain("FULL");
   });
 
+  it("does not start a new session that overlaps another session of the same event", () => {
+    // 60-minute sessions every 30 minutes; the 10:00-11:00 session already has an invitee.
+    const session = { start: at("2026-12-07T10:00"), end: at("2026-12-07T11:00") };
+    const res = computeSlots(
+      base("2026-12-07", { kind: "group", seats: 5, durationMinutes: 60, slotIntervalMinutes: 30, explain: true, hosts: [host({ eventBookings: [session] })] }),
+    );
+    const times = localTimes(res.slots.map((x) => x.start));
+    expect(times).toContain("10:00"); // joining the existing session
+    expect(times).not.toContain("09:30");
+    expect(times).not.toContain("10:30");
+    expect(times).toContain("11:00");
+    expect(res.explanations!.find((x) => x.start === at("2026-12-07T10:30"))!.hosts[0].reasons).toContain("BUSY");
+  });
+
   it("still blocks the group slot when the host has another meeting", () => {
     const other = { start: at("2026-12-07T10:15"), end: at("2026-12-07T10:45") };
     const res = computeSlots(base("2026-12-07", { kind: "group", seats: 5, hosts: [host({ eventBookings: [slot], busy: [slot, other] })] }));

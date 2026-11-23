@@ -49,12 +49,14 @@ export async function completeOidcLogin(config: Config, currentUrl: URL, expecte
   if (!claims) throw new Error("Identity provider returned no ID token");
   let email = claims.email as string | undefined;
   let name = claims.name as string | undefined;
+  let emailVerified = claims.email_verified as boolean | undefined;
   if (!email) {
     const info = await oidc.fetchUserInfo(oc, tokens.access_token, claims.sub);
     email = info.email;
     name = name ?? info.name;
+    emailVerified = info.email_verified;
   }
   if (!email) throw new Error("Identity provider did not share an email address (request the 'email' scope)");
-  if (claims.email_verified === false) throw new Error("Email address is not verified by the identity provider");
-  return { subject: claims.sub, email: email.toLowerCase(), name: name ?? email };
+  if (emailVerified === false) throw new Error("Email address is not verified by the identity provider");
+  return { subject: claims.sub, email: email.toLowerCase(), name: name ?? email, emailVerified: emailVerified === true };
 }

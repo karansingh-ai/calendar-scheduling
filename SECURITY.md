@@ -19,15 +19,15 @@ What the application does:
 - **API keys** are shown once and stored as SHA-256 hashes. Keys cannot mint other keys.
 - **Secrets at rest**: OAuth tokens, ICS feed URLs, webhook secrets and booking manage tokens are encrypted with AES-256-GCM using `ENCRYPTION_KEY`.
 - **Invitee links** use unguessable per-booking tokens (192 bits) compared by hash.
-- **SSO** uses OpenID Connect authorization code flow with PKCE, state and nonce, and rejects unverified emails.
+- **SSO** uses OpenID Connect authorization code flow with PKCE, state and nonce. Accounts are linked or created by email only when the provider marks the email verified.
 - **Rate limits** apply to login attempts and public booking endpoints (per process).
 - **Audit log** records sign-ins, failed sign-ins, configuration changes and booking changes with actor and IP.
-- **Webhooks** are signed (HMAC-SHA256 with timestamp). Cloud metadata addresses are blocked as targets.
+- **Webhooks and ICS feeds**: webhooks are signed (HMAC-SHA256 with timestamp). For every user-supplied URL, cloud metadata and other link-local addresses are blocked after DNS resolution (including IPv4-mapped IPv6 forms), on every redirect hop, with timeouts and a size limit on feeds.
 - **Headers**: `X-Content-Type-Options`, `Referrer-Policy`, and a Content Security Policy on HTML pages. The dashboard cannot be framed; booking pages can be embedded by design.
 
 What operators are responsible for:
 
 - Serving the app over HTTPS and keeping `ENCRYPTION_KEY` secret and backed up.
-- Network policy for webhooks: members can create webhooks to any reachable URL, including internal hosts. Restrict egress from the container if that is a concern.
+- Network policy for webhooks and ICS feeds: members can point them at any reachable URL, including internal hosts. The metadata check runs on the resolved address just before each request, so a DNS answer that changes between the check and the connection is not covered. Restrict egress from the container if that is a concern.
 - Rate limiting at the proxy when running multiple replicas.
 - Database access control and backups.

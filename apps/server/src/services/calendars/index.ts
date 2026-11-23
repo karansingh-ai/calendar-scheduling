@@ -4,6 +4,7 @@ import type { Config } from "../../config";
 import type { Db } from "../../db";
 import { bookingCalendarEvents, calendarConnections, calendars } from "../../db/schema";
 import type { Encrypter } from "../../lib/crypto";
+import type { ResolveHost } from "../../lib/outbound";
 import { googleProvider } from "./google";
 import { fetchIcsBusy } from "./ics";
 import { microsoftProvider } from "./microsoft";
@@ -22,6 +23,7 @@ export class CalendarService {
     private config: Config,
     private encrypter: Encrypter,
     private fetchFn: FetchFn,
+    private resolveHost: ResolveHost,
   ) {
     if (config.googleEnabled) {
       this.providers.set("google", googleProvider(config.GOOGLE_CLIENT_ID!, config.GOOGLE_CLIENT_SECRET!, fetchFn));
@@ -134,7 +136,7 @@ export class CalendarService {
 
   async addIcsFeed(userId: string, url: string, name: string) {
     // Validate the feed before saving it.
-    await fetchIcsBusy(this.fetchFn, url, new Date(), new Date(Date.now() + 86_400_000));
+    await fetchIcsBusy(this.fetchFn, this.resolveHost, url, new Date(), new Date(Date.now() + 86_400_000));
     const [conn] = await this.db
       .insert(calendarConnections)
       .values({ userId, provider: "ics", accountEmail: null, icsUrlEnc: this.encrypter.encrypt(url) })
@@ -190,7 +192,7 @@ export class CalendarService {
         } else {
           try {
             if (conn.provider === "ics") {
-              busy = await fetchIcsBusy(this.fetchFn, this.encrypter.decrypt(conn.icsUrlEnc!), from, to);
+              busy = await fetchIcsBusy(this.fetchFn, this.resolveHost, this.encrypter.decrypt(conn.icsUrlEnc!), from, to);
             } else {
               busy = await this.provider(conn.provider).getBusy(await this.accessToken(conn), ids, from, to);
             }

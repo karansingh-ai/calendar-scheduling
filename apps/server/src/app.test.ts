@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { and, eq } from "drizzle-orm";
+import { loadConfig } from "./config";
+import { bookings as bookingsTable } from "./db/schema";
 import { hmacSha256Hex } from "./lib/crypto";
 import { resolveSsoUser, safeReturnTo } from "./routes/auth";
+import { cancelBooking, createBooking } from "./services/bookings";
 import { ALWAYS_OPEN, dayStart, makeTestApp, type TestClient } from "./test/helpers";
 
 type T = Awaited<ReturnType<typeof makeTestApp>>;
@@ -151,6 +155,16 @@ describe("one-on-one booking lifecycle", () => {
     expect(remaining.find((s) => s.start === slot.start)).toBeUndefined();
   });
 
+  it("rejects invitee names with line breaks", async () => {
+    const slots = await slotsFor(eventTypeId);
+    const res = await t.client().post(`/api/public/event-types/${eventTypeId}/bookings`, {
+      start: slots[slots.length - 1].start,
+      invitee: { name: "Jane\r\nATTENDEE:mailto:evil@example.com", email: "jane@example.com", timezone: "Europe/Paris" },
+      answers: { company: "Acme" },
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("rejects start times that are not offered", async () => {
     const odd = new Date(dayStart(1).getTime() + 7 * 60_000).toISOString();
     expect((await book(eventTypeId, odd, "x@example.com", { company: "X" })).status).toBe(409);
@@ -180,6 +194,26 @@ describe("one-on-one booking lifecycle", () => {
     const old = await c.get(`/api/public/bookings/${manage.id}?token=${manage.token}`);
     expect(old.body.booking.status).toBe("cancelled");
     manage = { id: res.body.booking.id, token: res.body.manageToken };
+  });
+
+  it("a booking can only be moved or cancelled once, even when requests race", async () => {
+    const slots = await slotsFor(eventTypeId, 2, 6);
+    const created = await book(eventTypeId, slots[0].start, "racer@example.com", { company: "Initech" });
+    expect(created.status).toBe(201);
+    const [stale] = await t.ctx.db.select().from(bookingsTable).where(eq(bookingsTable.id, created.body.booking.id));
+    const actor = { userId: null, label: "test", ip: null };
+    const invitee = { name: "Racer", email: "racer@example.com", timezone: "UTC", answers: { company: "Initech" } };
+    // Both requests read the booking while it was confirmed.
+    const results = await Promise.allSettled([
+      createBooking(t.ctx, { eventTypeId, start: new Date(slots[1].start), invitee, actor, reschedule: { booking: stale, by: "invitee" } }),
+      createBooking(t.ctx, { eventTypeId, start: new Date(slots[2].start), invitee, actor, reschedule: { booking: stale, by: "invitee" } }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    await expect(cancelBooking(t.ctx, stale, { by: "invitee", actor })).rejects.toMatchObject({ code: "already_cancelled" });
+    const live = await t.ctx.db.select().from(bookingsTable).where(and(eq(bookingsTable.inviteeEmail, "racer@example.com"), eq(bookingsTable.status, "confirmed")));
+    expect(live).toHaveLength(1);
+    // Leave the shared fixture as the following tests expect it.
+    await t.ctx.db.delete(bookingsTable).where(eq(bookingsTable.inviteeEmail, "racer@example.com"));
   });
 
   it("lets the invitee cancel", async () => {
@@ -347,22 +381,70 @@ describe("team scheduling", () => {
 
 describe("single sign-on account matching", () => {
   it("links an unlinked account by email, then matches by subject", async () => {
-    const first = await resolveSsoUser(t.ctx, { subject: "idp|alice", email: "Alice@acme.test", name: "Alice" });
+    const first = await resolveSsoUser(t.ctx, { subject: "idp|alice", email: "Alice@acme.test", name: "Alice", emailVerified: true });
     expect("user" in first && first.user.email).toBe("alice@acme.test");
-    const again = await resolveSsoUser(t.ctx, { subject: "idp|alice", email: "alice.renamed@acme.test", name: "Alice" });
+    const again = await resolveSsoUser(t.ctx, { subject: "idp|alice", email: "alice.renamed@acme.test", name: "Alice", emailVerified: true });
     expect("user" in again && again.user.email).toBe("alice@acme.test");
   });
 
   it("never re-links an account that belongs to another SSO identity", async () => {
-    const res = await resolveSsoUser(t.ctx, { subject: "idp|someone-new", email: "alice@acme.test", name: "Not Alice" });
+    const res = await resolveSsoUser(t.ctx, { subject: "idp|someone-new", email: "alice@acme.test", name: "Not Alice", emailVerified: true });
     expect(res).toEqual({ error: "sso_account_conflict" });
     const audit = await owner.get("/api/v1/admin/audit?action=auth.login_failed");
     expect(audit.body.entries.some((e: { metadata: { reason?: string } }) => e.metadata.reason === "subject_mismatch")).toBe(true);
   });
 
+  it("never links or provisions by an email the identity provider did not verify", async () => {
+    const res = await resolveSsoUser(t.ctx, { subject: "idp|attacker", email: "owner@acme.test", name: "Attacker", emailVerified: false });
+    expect(res).toEqual({ error: "sso_email_unverified" });
+    const fresh = await resolveSsoUser(t.ctx, { subject: "idp|unverified", email: "unverified@acme.test", name: "U", emailVerified: false });
+    expect(fresh).toEqual({ error: "sso_email_unverified" });
+    const me = await owner.get("/api/v1/admin/users");
+    expect(me.body.users.some((u: { email: string }) => u.email === "unverified@acme.test")).toBe(false);
+  });
+
+  it("applies allowed email domains to linking as well as provisioning", async () => {
+    const previous = t.ctx.config.allowedEmailDomains;
+    t.ctx.config.allowedEmailDomains = ["other.test"];
+    try {
+      const res = await resolveSsoUser(t.ctx, { subject: "idp|owner", email: "owner@acme.test", name: "Owner", emailVerified: true });
+      expect(res).toEqual({ error: "sso_not_allowed" });
+    } finally {
+      t.ctx.config.allowedEmailDomains = previous;
+    }
+  });
+
   it("auto-provisions new people", async () => {
-    const res = await resolveSsoUser(t.ctx, { subject: "idp|newhire", email: "newhire@acme.test", name: "New Hire" });
+    const res = await resolveSsoUser(t.ctx, { subject: "idp|newhire", email: "newhire@acme.test", name: "New Hire", emailVerified: true });
     expect("user" in res && res.user.role).toBe("member");
+  });
+});
+
+describe("client IPs behind a proxy", () => {
+  it("parses TRUST_PROXY as a hop count", () => {
+    expect(loadConfig({ TRUST_PROXY: "true" }).TRUST_PROXY).toBe(1);
+    expect(loadConfig({ TRUST_PROXY: "2" }).TRUST_PROXY).toBe(2);
+    expect(loadConfig({}).TRUST_PROXY).toBe(0);
+    expect(() => loadConfig({ TRUST_PROXY: "lots" })).toThrow(/TRUST_PROXY/);
+  });
+
+  it("a forged X-Forwarded-For prefix cannot dodge the login rate limit", async () => {
+    t.ctx.config.TRUST_PROXY = 1;
+    try {
+      const statuses: number[] = [];
+      for (let i = 0; i < 12; i++) {
+        const res = await t.client().req("POST", "/api/auth/login", { email: "owner@acme.test", password: "wrong password" }, {
+          "x-forwarded-for": `10.9.9.${i}, 203.0.113.7`,
+        });
+        statuses.push(res.status);
+      }
+      expect(statuses.slice(0, 10).every((s) => s === 401)).toBe(true);
+      expect(statuses.slice(10)).toEqual([429, 429]);
+      const audit = await owner.get("/api/v1/admin/audit?action=auth.login_failed&limit=1");
+      expect(audit.body.entries[0].ip).toBe("203.0.113.7");
+    } finally {
+      t.ctx.config.TRUST_PROXY = 0;
+    }
   });
 });
 
@@ -415,6 +497,45 @@ describe("integrations", () => {
     expect(deliveries.body.deliveries[0].status).toBe("succeeded");
   });
 
+  it("blocks webhook targets that reach cloud metadata, however they are spelled", async () => {
+    for (const url of ["http://[::ffff:169.254.169.254]/latest", "http://[fe80::1]/"]) {
+      expect((await owner.post("/api/v1/webhooks", { url, events: ["booking.created"] })).status, url).toBe(400);
+    }
+    t.dns.set("metadata-alias.example.com", ["169.254.169.254"]);
+    expect((await owner.post("/api/v1/webhooks", { url: "https://metadata-alias.example.com/", events: ["booking.created"] })).status).toBe(400);
+
+    // A name that was fine when saved but later resolves to metadata is refused at delivery time.
+    t.dns.set("rebind.example.com", ["93.184.215.14"]);
+    const hook = await owner.post("/api/v1/webhooks", { url: "https://rebind.example.com/in", events: ["booking.created"] });
+    expect(hook.status).toBe(201);
+    t.dns.set("rebind.example.com", ["169.254.169.254"]);
+    t.calls.length = 0;
+    const ping = await owner.post(`/api/v1/webhooks/${hook.body.webhook.id}/test`);
+    expect(ping.body.ok).toBe(false);
+    expect(t.calls.some((c) => c.url.includes("rebind.example.com"))).toBe(false);
+    await owner.del(`/api/v1/webhooks/${hook.body.webhook.id}`);
+  });
+
+  it("only retries deliveries that belong to the caller's webhook", async () => {
+    const all = (await owner.get("/api/v1/webhooks")).body.webhooks as { id: string }[];
+    const ownerHook = all[0];
+    const ownerDelivery = (await owner.get(`/api/v1/webhooks/${ownerHook.id}/deliveries`)).body.deliveries[0];
+    expect(ownerDelivery).toBeDefined();
+    const mallory = await inviteMember("mallory@acme.test", "Mallory");
+    const theirs = await mallory.client.post("/api/v1/webhooks", { url: "https://mallory.example.com/in", events: ["booking.created"] });
+    const res = await mallory.client.post(`/api/v1/webhooks/${theirs.body.webhook.id}/deliveries/${ownerDelivery.id}/retry`);
+    expect(res.status).toBe(404);
+  });
+
+  it("refuses ICS feeds that redirect to a blocked address", async () => {
+    t.dns.set("cloud-meta.example.com", ["169.254.169.254"]);
+    t.respond((u) => u.startsWith("https://redirector.example.com/"), () => new Response(null, { status: 302, headers: { location: "http://cloud-meta.example.com/latest" } }));
+    t.calls.length = 0;
+    const res = await owner.post("/api/v1/calendar-connections/ics", { url: "https://redirector.example.com/feed.ics", name: "Sneaky" });
+    expect(res.status).toBe(400);
+    expect(t.calls.some((c) => c.url.includes("cloud-meta"))).toBe(false);
+  });
+
   it("reads busy time from an ICS feed", async () => {
     const busyStart = new Date(dayStart(5).getTime() + 10 * 3600_000);
     const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -450,5 +571,32 @@ describe("integrations", () => {
     const csv = await owner.get("/api/v1/admin/audit.csv");
     expect(csv.status).toBe(200);
     expect(String(csv.body)).toContain("booking.created");
+  });
+});
+
+describe("partial updates", () => {
+  it("accepts an empty PATCH body as a no-op instead of failing", async () => {
+    const sched = (await owner.get("/api/v1/schedules")).body.schedules[0].id;
+    const me = (await owner.get("/api/v1/me")).body.user.id;
+    const team = (await owner.get("/api/v1/teams")).body.teams[0].id;
+    const cal = (await owner.get("/api/v1/calendars")).body.connections[0].calendars[0].id;
+    for (const path of ["/api/v1/me", `/api/v1/schedules/${sched}`, `/api/v1/admin/users/${me}`, `/api/v1/teams/${team}`, `/api/v1/calendars/${cal}`]) {
+      expect((await owner.patch(path, {})).status, path).toBe(200);
+    }
+  });
+});
+
+describe("rescheduling after the event changes", () => {
+  it("a required question added after booking does not block rescheduling", async () => {
+    const et = (await owner.post("/api/v1/event-types", { title: "Quick Sync", minimumNoticeMinutes: 0 })).body.eventType;
+    const slots = await slotsFor(et.id, 1, 9);
+    const booked = await book(et.id, slots[0].start, "later@example.com");
+    expect(booked.status).toBe(201);
+    const patched = await owner.patch(`/api/v1/event-types/${et.id}`, { questions: [{ id: "agenda", label: "Agenda", type: "text", required: true }] });
+    expect(patched.status).toBe(200);
+    const res = await t.client().post(`/api/public/bookings/${booked.body.booking.id}/reschedule`, { token: booked.body.manageToken, start: slots[1].start });
+    expect(res.status).toBe(201);
+    // New bookings still have to answer it.
+    expect((await book(et.id, slots[2].start, "new@example.com")).status).toBe(400);
   });
 });

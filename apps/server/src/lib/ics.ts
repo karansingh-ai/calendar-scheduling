@@ -21,8 +21,16 @@ function escapeText(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 }
 
+// Control characters (including CR/LF) would end the content line and let input write its own properties.
+const CONTROL = /[\u0000-\u001f\u007f]/g;
+
 function escapeParam(s: string): string {
-  return `"${s.replace(/"/g, "'")}"`;
+  return `"${s.replace(CONTROL, " ").replace(/"/g, "'")}"`;
+}
+
+/** Calendar addresses and URLs are written raw, so they must not contain control characters or spaces. */
+function raw(s: string): string {
+  return s.replace(CONTROL, "").replace(/\s/g, "");
 }
 
 /** Fold lines longer than 75 octets as required by RFC 5545. */
@@ -51,7 +59,7 @@ export function buildIcs(e: IcsEvent): string {
     "CALSCALE:GREGORIAN",
     `METHOD:${e.method}`,
     "BEGIN:VEVENT",
-    `UID:${e.uid}`,
+    `UID:${raw(e.uid)}`,
     `SEQUENCE:${e.sequence}`,
     `DTSTAMP:${fmt(new Date())}`,
     `DTSTART:${fmt(e.start)}`,
@@ -59,10 +67,10 @@ export function buildIcs(e: IcsEvent): string {
     `SUMMARY:${escapeText(e.summary)}`,
     e.description ? `DESCRIPTION:${escapeText(e.description)}` : "",
     e.location ? `LOCATION:${escapeText(e.location)}` : "",
-    e.url ? `URL:${e.url}` : "",
-    `ORGANIZER;CN=${escapeParam(e.organizer.name)}:mailto:${e.organizer.email}`,
+    e.url ? `URL:${raw(e.url)}` : "",
+    `ORGANIZER;CN=${escapeParam(e.organizer.name)}:mailto:${raw(e.organizer.email)}`,
     ...e.attendees.map(
-      (a) => `ATTENDEE;CN=${escapeParam(a.name)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${a.email}`,
+      (a) => `ATTENDEE;CN=${escapeParam(a.name)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${raw(a.email)}`,
     ),
     `STATUS:${e.method === "CANCEL" ? "CANCELLED" : "CONFIRMED"}`,
     "TRANSP:OPAQUE",

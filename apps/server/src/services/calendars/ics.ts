@@ -1,15 +1,22 @@
 import type { Interval } from "@scheduler/core";
 import ical from "node-ical";
+import { guardedFetch, readTextLimited, type ResolveHost } from "../../lib/outbound";
 import type { FetchFn } from "./types";
+
+const FEED_TIMEOUT_MS = 8_000;
+const FEED_MAX_BYTES = 10_000_000;
 
 /**
  * Read-only busy time from a published iCalendar feed (iCloud, Fastmail, Proton, Outlook "publish",
  * any CalDAV server's export URL...). Recurring events are expanded within the requested range.
  */
-export async function fetchIcsBusy(fetchFn: FetchFn, url: string, from: Date, to: Date): Promise<Interval[]> {
-  const res = await fetchFn(url.replace(/^webcal:\/\//i, "https://"), { headers: { accept: "text/calendar" } });
+export async function fetchIcsBusy(fetchFn: FetchFn, resolveHost: ResolveHost, url: string, from: Date, to: Date): Promise<Interval[]> {
+  const res = await guardedFetch(fetchFn, resolveHost, url.replace(/^webcal:\/\//i, "https://"), { headers: { accept: "text/calendar" } }, {
+    timeoutMs: FEED_TIMEOUT_MS,
+    maxRedirects: 3,
+  });
   if (!res.ok) throw new Error(`ICS feed returned HTTP ${res.status}`);
-  const text = await res.text();
+  const text = await readTextLimited(res, FEED_MAX_BYTES);
   return busyFromIcs(text, from, to);
 }
 

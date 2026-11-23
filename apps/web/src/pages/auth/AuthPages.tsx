@@ -27,6 +27,7 @@ const ERRORS: Record<string, string> = {
   sso_failed: "Single sign-on failed. Please try again.",
   sso_expired: "The sign-in attempt expired. Please try again.",
   sso_not_allowed: "Your account is not allowed to sign in here. Ask an admin for an invite.",
+  sso_email_unverified: "Your identity provider did not confirm your email address, so it cannot be used to sign in here.",
   sso_account_conflict: "This email belongs to an account linked to a different sign-in identity. Ask an admin for help.",
   account_disabled: "This account is disabled.",
 };

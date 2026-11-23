@@ -36,12 +36,34 @@ const schema = z.object({
   OIDC_DISPLAY_NAME: z.string().default("SSO"),
   /** Create accounts on first SSO login. */
   OIDC_AUTO_PROVISION: bool.default(true),
-  /** Comma-separated email domains allowed to sign in via SSO auto-provisioning, e.g. "acme.com,acme.io". */
+  /**
+   * Accept SSO emails the identity provider does not mark as verified (no `email_verified: true` claim).
+   * Only enable for a single-tenant IdP you control, such as Entra ID with a tenant-specific issuer.
+   */
+  OIDC_TRUST_UNVERIFIED_EMAIL: bool.default(false),
+  /** Comma-separated email domains allowed to sign in via SSO, e.g. "acme.com,acme.io". */
   ALLOWED_EMAIL_DOMAINS: optionalString,
   /** Set to false to require SSO for everyone except the owner. */
   PASSWORD_LOGIN: bool.default(true),
-  /** Honor X-Forwarded-For / X-Forwarded-Proto from a reverse proxy. */
-  TRUST_PROXY: bool.default(false),
+  /**
+   * Honor X-Forwarded-For from reverse proxies. "true" means one proxy in front of the app; a number is how
+   * many proxies append to the header (for example 2 for a CDN plus a load balancer). "false" ignores it.
+   */
+  TRUST_PROXY: z
+    .union([z.boolean(), z.string(), z.number()])
+    .transform((v, ctx) => {
+      if (typeof v === "boolean") return v ? 1 : 0;
+      const s = String(v).trim().toLowerCase();
+      if (["1", "true", "yes", "on"].includes(s)) return 1;
+      if (["", "0", "false", "no", "off"].includes(s)) return 0;
+      const n = Number(s);
+      if (!Number.isInteger(n) || n < 0 || n > 10) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Use true, false or a number of proxy hops (0-10)' });
+        return z.NEVER;
+      }
+      return n;
+    })
+    .default(false),
   /** Run the background job worker in this process. Disable on extra web replicas if you like. */
   WORKER_ENABLED: bool.default(true),
   /** Directory with the built web app. Defaults to apps/web/dist. */

@@ -31,10 +31,14 @@ export async function makeTestApp(env: Record<string, string> = {}) {
     await sql.unsafe("drop schema if exists public cascade; create schema public; drop schema if exists drizzle cascade;");
     await sql.end();
   }
+  // Fake DNS: every name is a public address unless a test maps it elsewhere. Never queries real DNS.
+  const dns = new Map<string, string[]>();
+  const resolveHost = async (hostname: string) => dns.get(hostname) ?? ["93.184.215.14"];
   const { ctx, database } = await bootstrap({
     env: { NODE_ENV: "test", DATABASE_URL: databaseUrl, APP_URL, ...env },
     mailer,
     fetch: fakeFetch,
+    resolveHost,
   });
   const app = createApp(ctx);
 
@@ -43,6 +47,7 @@ export async function makeTestApp(env: Record<string, string> = {}) {
     ctx,
     mailer,
     calls,
+    dns,
     respond(match: (url: string) => boolean, respond: (url: string, init?: RequestInit) => Response) {
       responders.push({ match, respond });
     },

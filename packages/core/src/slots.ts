@@ -140,9 +140,15 @@ export function computeSlots(q: SlotQuery): SlotResult {
       if (!joiningExisting && !containedIn(h.windows, start, end)) reasons.push("OUTSIDE_WORKING_HOURS");
 
       // For a group slot with seats taken, the host's own copy of the meeting is not a conflict.
-      const busy = joiningExisting
+      let busy = joiningExisting
         ? mergeIntervals(h.rawBusy.filter((b) => !(b.start === start && b.end === end)))
         : h.busy;
+      // A new group session must not overlap this event type's sessions at other start times (possible when
+      // the slot interval is shorter than the duration). Joining an existing session is always allowed.
+      if (q.kind === "group" && !joiningExisting) {
+        const others = (h.input.eventBookings ?? []).filter((b) => b.start !== start);
+        if (others.length) busy = mergeIntervals([...busy, ...others]);
+      }
       if (overlapsAny(busy, start, end)) reasons.push("BUSY");
       else if ((before || after) && overlapsAny(busy, start - before, end + after)) reasons.push("BUFFER_CONFLICT");
 

@@ -20,9 +20,12 @@ export type AppEnv = {
 
 export function clientIp(c: Context): string | null {
   const ctx = c.get("ctx") as AppContext;
-  if (ctx.config.TRUST_PROXY) {
-    const fwd = c.req.header("x-forwarded-for");
-    if (fwd) return fwd.split(",")[0].trim();
+  const hops = ctx.config.TRUST_PROXY;
+  if (hops > 0) {
+    // Each trusted proxy appends the address it received the request from, so the client is `hops`
+    // entries from the right. Entries further left were written by the client and can be forged.
+    const fwd = c.req.header("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean);
+    if (fwd?.length) return fwd[Math.max(0, fwd.length - hops)];
   }
   const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)?.incoming;
   return incoming?.socket?.remoteAddress ?? null;

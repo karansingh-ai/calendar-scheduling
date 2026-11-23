@@ -9,7 +9,7 @@ import { conflict, forbidden, notFound, parseBody } from "../lib/http";
 import { RESERVED_USERNAMES, SLUG_RE } from "../lib/slug";
 import { audit } from "../services/audit";
 import { publicUser } from "../services/users";
-import { deliverWebhook, signatureHeader, validateWebhookUrl, WEBHOOK_EVENTS } from "../services/webhooks";
+import { deliverWebhook, postWebhook, signatureHeader, validateWebhookUrl, WEBHOOK_EVENTS } from "../services/webhooks";
 import { isAdmin } from "../auth/middleware";
 
 /** /api/v1/me */
@@ -33,6 +33,7 @@ meRoutes.patch("/", async (c) => {
       welcomeMessage: z.string().max(1000).nullable().optional(),
     }),
   );
+  if (Object.keys(body).length === 0) return c.json({ user: publicUser(user) });
   if (body.username && body.username !== user.username) {
     const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.username, body.username));
     if (taken) throw conflict("That username is taken", "username_taken");
@@ -130,7 +131,7 @@ webhookRoutes.post("/", async (c) => {
   const user = currentUser(c);
   const body = await parseBody(c, webhookInput);
   if (body.scope === "org" && !isAdmin(user)) throw forbidden("Only admins can create organization-wide webhooks");
-  const url = validateWebhookUrl(body.url);
+  const url = await validateWebhookUrl(ctx, body.url);
   const secret = `whsec_${randomToken(24)}`;
   const [row] = await ctx.db
     .insert(webhooks)
@@ -141,12 +142,13 @@ webhookRoutes.post("/", async (c) => {
 });
 
 webhookRoutes.patch("/:id", async (c) => {
-  const { db } = c.get("ctx");
+  const ctx = c.get("ctx");
+  const { db } = ctx;
   const w = await ownWebhook(c);
   const body = await parseBody(c, webhookInput.omit({ scope: true }).partial());
   const [row] = await db
     .update(webhooks)
-    .set({ ...(body.url ? { url: validateWebhookUrl(body.url) } : {}), ...(body.events ? { events: body.events as never } : {}), ...(body.active !== undefined ? { active: body.active } : {}) })
+    .set({ url: body.url ? await validateWebhookUrl(ctx, body.url) : w.url, ...(body.events ? { events: body.events as never } : {}), ...(body.active !== undefined ? { active: body.active } : {}) })
     .where(eq(webhooks.id, w.id))
     .returning();
   await audit(db, actor(c), "webhook.updated", { type: "webhook", id: w.id }, { fields: Object.keys(body) });
@@ -176,13 +178,7 @@ webhookRoutes.post("/:id/test", async (c) => {
   const w = await ownWebhook(c);
   const body = JSON.stringify({ id: `ping_${randomToken(8)}`, event: "ping", createdAt: new Date().toISOString(), data: {} });
   try {
-    const res = await ctx.fetch(w.url, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-webhook-event": "ping", "x-webhook-signature": signatureHeader(ctx.encrypter.decrypt(w.secretEnc), body) },
-      body,
-      signal: AbortSignal.timeout(10_000),
-      redirect: "manual",
-    });
+    const res = await postWebhook(ctx, w.url, { "x-webhook-event": "ping", "x-webhook-signature": signatureHeader(ctx.encrypter.decrypt(w.secretEnc), body) }, body);
     return c.json({ ok: res.ok, status: res.status });
   } catch (err) {
     return c.json({ ok: false, status: null, error: err instanceof Error ? err.message : String(err) });
@@ -191,9 +187,16 @@ webhookRoutes.post("/:id/test", async (c) => {
 
 webhookRoutes.post("/:id/deliveries/:deliveryId/retry", async (c) => {
   const ctx = c.get("ctx");
-  await ownWebhook(c);
+  const w = await ownWebhook(c);
+  const deliveryId = c.req.param("deliveryId");
+  if (!z.string().uuid().safeParse(deliveryId).success) throw notFound("Delivery not found");
+  const [delivery] = await ctx.db
+    .select({ id: webhookDeliveries.id })
+    .from(webhookDeliveries)
+    .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.webhookId, w.id)));
+  if (!delivery) throw notFound("Delivery not found");
   try {
-    await deliverWebhook(ctx, c.req.param("deliveryId"));
+    await deliverWebhook(ctx, delivery.id);
     return c.json({ ok: true });
   } catch (err) {
     return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) });

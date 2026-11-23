@@ -139,21 +139,32 @@ export interface SsoIdentity {
   subject: string;
   email: string;
   name: string;
+  /** True only when the identity provider asserted `email_verified: true`. */
+  emailVerified: boolean;
 }
 
 /**
  * Map an identity-provider login to a local account.
  * 1. Match the IdP subject. 2. Otherwise match email, but only for accounts not linked to another subject
  * (a reassigned address must not take over someone's account). 3. Otherwise auto-provision if allowed.
+ * Steps 2 and 3 trust the email address, so they require a verified email and an allowed domain.
  */
 export async function resolveSsoUser(
   ctx: AppEnv["Variables"]["ctx"],
   identity: SsoIdentity,
   ip: string | null = null,
-): Promise<{ user: typeof users.$inferSelect } | { error: "sso_account_conflict" | "sso_not_allowed" }> {
+): Promise<{ user: typeof users.$inferSelect } | { error: "sso_account_conflict" | "sso_not_allowed" | "sso_email_unverified" }> {
   const email = identity.email.toLowerCase();
   const [bySubject] = await ctx.db.select().from(users).where(eq(users.oidcSubject, identity.subject));
   if (bySubject) return { user: bySubject };
+
+  if (!identity.emailVerified && !ctx.config.OIDC_TRUST_UNVERIFIED_EMAIL) {
+    await audit(ctx.db, { userId: null, label: email, ip }, "auth.login_failed", undefined, { method: "oidc", reason: "email_unverified" });
+    return { error: "sso_email_unverified" };
+  }
+  const domain = email.split("@")[1];
+  const domainOk = ctx.config.allowedEmailDomains.length === 0 || ctx.config.allowedEmailDomains.includes(domain);
+  if (!domainOk) return { error: "sso_not_allowed" };
 
   const [byEmail] = await ctx.db.select().from(users).where(eq(users.email, email));
   if (byEmail) {
@@ -165,9 +176,7 @@ export async function resolveSsoUser(
     return { user: { ...byEmail, oidcSubject: identity.subject } };
   }
 
-  const domain = email.split("@")[1];
-  const domainOk = ctx.config.allowedEmailDomains.length === 0 || ctx.config.allowedEmailDomains.includes(domain);
-  if (!ctx.config.OIDC_AUTO_PROVISION || !domainOk) return { error: "sso_not_allowed" };
+  if (!ctx.config.OIDC_AUTO_PROVISION) return { error: "sso_not_allowed" };
   const user = await createUser(ctx.db, { email, name: identity.name, oidcSubject: identity.subject });
   await audit(ctx.db, { userId: user.id, label: user.email, ip }, "user.provisioned", { type: "user", id: user.id }, { via: "oidc" });
   return { user };

@@ -57,6 +57,7 @@ scheduleRoutes.patch("/:id", async (c) => {
   const { db } = c.get("ctx");
   const s = await own(c);
   const body = await parseBody(c, z.object(scheduleFields).partial());
+  if (Object.keys(body).length === 0) return c.json({ schedule: serializeSchedule(s) });
   check({ timezone: body.timezone ?? s.timezone, weekly: body.weekly ?? s.weekly, overrides: body.overrides ?? s.overrides });
   if (body.isDefault === false && s.isDefault) throw badRequest("Make another schedule the default instead");
   const updated = await db.transaction(async (tx) => {

@@ -12,7 +12,12 @@ import { serializeBooking } from "../services/serialize";
 import { loadEventType } from "../services/availability";
 
 export const inviteeSchema = z.object({
-  name: z.string().min(1).max(200),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .refine((n) => !/[\u0000-\u001f\u007f]/.test(n), "Name cannot contain line breaks or control characters"),
   email: z.string().email().max(320),
   timezone: z.string().refine(isValidTimeZone, "Unknown time zone"),
 });

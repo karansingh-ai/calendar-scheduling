@@ -30,7 +30,8 @@ All configuration is through environment variables. Invalid values stop the serv
 | `OIDC_CLIENT_SECRET` | none | Client secret (omit for public clients using PKCE only). |
 | `OIDC_DISPLAY_NAME` | `SSO` | Button label: "Continue with ...". |
 | `OIDC_AUTO_PROVISION` | `true` | Create accounts on first SSO sign-in. When false, only invited users can sign in. |
-| `ALLOWED_EMAIL_DOMAINS` | none | Comma-separated domains allowed to auto-provision, e.g. `acme.com,acme.io`. |
+| `ALLOWED_EMAIL_DOMAINS` | none | Comma-separated domains allowed to sign in with SSO (linking and auto-provisioning), e.g. `acme.com,acme.io`. |
+| `OIDC_TRUST_UNVERIFIED_EMAIL` | `false` | Accept SSO emails the provider does not mark `email_verified: true`. Only for a single-tenant provider you control (for example Entra ID with a tenant-specific issuer). |
 | `PASSWORD_LOGIN` | `true` | Set to `false` to require SSO for everyone except the owner (kept as break-glass access). |
 | `SESSION_DAYS` | `30` | Session lifetime. |
 
@@ -48,7 +49,7 @@ ICS feeds need no configuration.
 
 | Variable | Default | Description |
 |---|---|---|
-| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` from your reverse proxy for client IPs. |
+| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` from your reverse proxy for client IPs. `true` means one proxy; use a number for several (for example `2` for a CDN in front of a load balancer). The client address is read that many entries from the right, so it cannot be forged by the client. |
 | `WORKER_ENABLED` | `true` | Run the background job worker (emails, reminders, webhooks) in this process. |
 | `WEB_DIST_DIR` | `apps/web/dist` | Location of the built web app. |
 | `MIGRATIONS_DIR` | `apps/server/drizzle` | Location of SQL migrations. |

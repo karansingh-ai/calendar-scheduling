@@ -19,7 +19,14 @@ Then set `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET`.
 | Authentik | `https://<host>/application/o/<slug>/` |
 | Auth0 | `https://<tenant>.auth0.com/` |
 
-Sign-in matches users by the provider's subject ID, then by email for accounts not yet linked to SSO. An account already linked to a different subject is never re-linked by email, so a reassigned address cannot take over someone's account. New users are created as members when `OIDC_AUTO_PROVISION=true` and their domain is in `ALLOWED_EMAIL_DOMAINS` (if set). Providers that report `email_verified=false` are rejected.
+Sign-in matches users by the provider's subject ID, then by email for accounts not yet linked to SSO. An account already linked to a different subject is never re-linked by email, so a reassigned address cannot take over someone's account. New users are created as members when `OIDC_AUTO_PROVISION=true`.
+
+Matching by email and creating accounts both trust the email address, so both require:
+
+- **A verified email.** The ID token (or userinfo response) must include `email_verified: true`. Google, Okta, Keycloak and Auth0 send it. Microsoft Entra ID does not; with a tenant-specific issuer (not `common` or `organizations`) you can set `OIDC_TRUST_UNVERIFIED_EMAIL=true`.
+- **An allowed domain**, when `ALLOWED_EMAIL_DOMAINS` is set.
+
+**Open sign-up with Google accounts:** with `OIDC_ISSUER=https://accounts.google.com`, `OIDC_AUTO_PROVISION=true` and no `ALLOWED_EMAIL_DOMAINS`, anyone with a Google account can create a member account. Members can see the user directory (names and emails), so restrict domains for a company deployment.
 
 ## Google Calendar and Google Meet
 

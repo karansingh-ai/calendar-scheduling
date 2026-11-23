@@ -4,26 +4,28 @@ import type { AppContext } from "../context";
 import { bookingHosts, bookings, eventTypes, users, webhookDeliveries, webhooks, type WebhookEvent } from "../db/schema";
 import { hmacSha256Hex } from "../lib/crypto";
 import { badRequest } from "../lib/http";
+import { assertAllowedUrl, BlockedUrlError, guardedFetch } from "../lib/outbound";
 import { enqueue } from "./jobs";
 import { serializeBooking } from "./serialize";
 
 export const WEBHOOK_EVENTS: WebhookEvent[] = ["booking.created", "booking.rescheduled", "booking.cancelled"];
 
-const BLOCKED_HOSTS = new Set(["169.254.169.254", "metadata.google.internal", "metadata", "fd00:ec2::254"]);
-
-/** Basic URL checks. Blocks cloud metadata endpoints; private network targets are allowed for internal tools. */
-export function validateWebhookUrl(raw: string): string {
-  let url: URL;
+/**
+ * URL checks at save time. Blocks cloud metadata and link-local targets (also re-checked on every delivery);
+ * private network targets are allowed for internal tools.
+ */
+export async function validateWebhookUrl(ctx: AppContext, raw: string): Promise<string> {
   try {
-    url = new URL(raw);
-  } catch {
-    throw badRequest("Webhook URL is not a valid URL");
+    return (await assertAllowedUrl(raw, ctx.resolveHost)).toString();
+  } catch (err) {
+    if (err instanceof BlockedUrlError) throw badRequest(`Webhook URL rejected: ${err.message}`);
+    throw err;
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw badRequest("Webhook URL must use http or https");
-  const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  if (BLOCKED_HOSTS.has(host) || host.startsWith("169.254.")) throw badRequest("Webhook URL points to a blocked address");
-  if (url.username || url.password) throw badRequest("Do not put credentials in the webhook URL; verify the signature instead");
-  return url.toString();
+}
+
+/** POST a signed payload to a webhook URL. Redirects are not followed. */
+export function postWebhook(ctx: AppContext, url: string, headers: Record<string, string>, body: string) {
+  return guardedFetch(ctx.fetch, ctx.resolveHost, url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body }, { timeoutMs: 10_000 });
 }
 
 /**
@@ -89,19 +91,17 @@ export async function deliverWebhook(ctx: AppContext, deliveryId: string) {
   let status: number | null = null;
   let error: string | null = null;
   try {
-    const res = await ctx.fetch(row.hook.url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
+    const res = await postWebhook(
+      ctx,
+      row.hook.url,
+      {
         "user-agent": `${ctx.config.APP_NAME}-Webhooks/1.0`,
         "x-webhook-id": row.delivery.id,
         "x-webhook-event": row.delivery.event,
         "x-webhook-signature": signatureHeader(secret, body),
       },
       body,
-      signal: AbortSignal.timeout(10_000),
-      redirect: "manual",
-    });
+    );
     status = res.status;
     if (!res.ok) error = `HTTP ${res.status}`;
   } catch (err) {

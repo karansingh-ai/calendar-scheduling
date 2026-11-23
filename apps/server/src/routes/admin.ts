@@ -69,6 +69,7 @@ adminRoutes.patch("/users/:id", async (c) => {
   const body = await parseBody(c, z.object({ role: z.enum(["owner", "admin", "member"]).optional(), disabled: z.boolean().optional(), name: z.string().min(1).max(120).optional() }));
   const [user] = await ctx.db.select().from(users).where(eq(users.id, id));
   if (!user) throw notFound("User not found");
+  if (Object.keys(body).length === 0) return c.json({ user: publicUser(user) });
   if (user.role === "owner" && me.role !== "owner") throw forbidden("Only the owner can change the owner account");
   if (body.role === "owner" && me.role !== "owner") throw forbidden("Only the owner can transfer ownership");
   if (user.id === me.id && (body.disabled || (body.role && body.role !== me.role))) throw badRequest("You cannot change your own role or disable yourself");
@@ -197,10 +198,13 @@ teamRoutes.patch("/:id", async (c) => {
   if (!z.string().uuid().safeParse(id).success) throw notFound();
   if (!(await canManageTeam(c, id))) throw forbidden();
   const body = await parseBody(c, z.object({ name: z.string().min(1).max(120).optional(), slug: z.string().regex(SLUG_RE).optional() }));
+  if (Object.keys(body).length === 0) return c.json({ team: await teamWithMembers(c, id) });
   try {
     await db.update(teams).set(body).where(eq(teams.id, id));
-  } catch {
-    throw conflict("A team with that URL already exists", "slug_taken");
+  } catch (err) {
+    const e = err as { code?: string; cause?: { code?: string } };
+    if (e?.code === "23505" || e?.cause?.code === "23505") throw conflict("A team with that URL already exists", "slug_taken");
+    throw err;
   }
   await audit(db, actor(c), "team.updated", { type: "team", id }, body);
   return c.json({ team: await teamWithMembers(c, id) });

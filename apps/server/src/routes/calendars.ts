@@ -40,6 +40,7 @@ calendarRoutes.patch("/:id", async (c) => {
   const body = await parseBody(c, z.object({ checkConflicts: z.boolean().optional(), isDestination: z.boolean().optional() }));
   const [cal] = await ctx.db.select().from(calendars).where(and(eq(calendars.id, id), eq(calendars.userId, user.id)));
   if (!cal) throw notFound("Calendar not found");
+  if (Object.keys(body).length === 0) return c.json({ ok: true });
   if (body.isDestination && cal.readOnly) throw badRequest("Bookings cannot be written to a read-only calendar");
   await ctx.db.transaction(async (tx) => {
     if (body.isDestination) await tx.update(calendars).set({ isDestination: false }).where(and(eq(calendars.userId, user.id), ne(calendars.id, id)));

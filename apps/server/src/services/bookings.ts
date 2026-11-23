@@ -1,5 +1,5 @@
 import { assignRoundRobin, computeSlots, isSlotAvailable, type Slot } from "@scheduler/core";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { AppContext } from "../context";
 import { bookingHosts, bookings, users, type BookingLocation, type EventQuestion } from "../db/schema";
 import { randomToken, sha256 } from "../lib/crypto";
@@ -27,12 +27,16 @@ export interface CreateBookingInput {
   reschedule?: { booking: BookingRow; by: "host" | "invitee" | "admin"; reason?: string };
 }
 
-export function validateAnswers(questions: EventQuestion[], answers: Record<string, string | boolean> = {}) {
+/**
+ * Keep answers to the event's current questions. `requireAll: false` is for reschedules: the invitee answered
+ * when they booked, and questions added since then must not block moving the meeting.
+ */
+export function validateAnswers(questions: EventQuestion[], answers: Record<string, string | boolean> = {}, { requireAll = true } = {}) {
   const clean: Record<string, string | boolean> = {};
   for (const q of questions) {
     const v = answers[q.id];
     const empty = v === undefined || v === null || v === "" || v === false;
-    if (q.required && empty) throw badRequest(`"${q.label}" is required`, [{ path: `answers.${q.id}`, message: "Required" }]);
+    if (q.required && empty && requireAll) throw badRequest(`"${q.label}" is required`, [{ path: `answers.${q.id}`, message: "Required" }]);
     if (empty) continue;
     if (q.type === "checkbox") {
       clean[q.id] = Boolean(v);
@@ -64,7 +68,7 @@ export async function createBooking(ctx: AppContext, input: CreateBookingInput):
   if (!loaded || !loaded.eventType.active) throw notFound("This event type is not available");
   if (loaded.hosts.length === 0) throw conflict("This event type has no available hosts", "no_hosts");
   const et = loaded.eventType;
-  const answers = validateAnswers(et.questions, input.invitee.answers);
+  const answers = validateAnswers(et.questions, input.invitee.answers, { requireAll: !input.reschedule });
   const start = input.start;
   if (Number.isNaN(start.getTime())) throw badRequest("Invalid start time");
 
@@ -77,6 +81,17 @@ export async function createBooking(ctx: AppContext, input: CreateBookingInput):
     const hostIds = loaded.hosts.map((h) => h.user.id).sort();
     // Serialize bookings per host.
     await tx.select({ id: users.id }).from(users).where(inArray(users.id, hostIds)).orderBy(users.id).for("update");
+
+    // The booking being moved must still be live: two concurrent reschedules (or a cancel racing a
+    // reschedule) would otherwise both succeed and leave two meetings.
+    if (input.reschedule) {
+      const [original] = await tx
+        .select({ status: bookings.status })
+        .from(bookings)
+        .where(eq(bookings.id, input.reschedule.booking.id))
+        .for("update");
+      if (original?.status !== "confirmed") throw conflict("This booking has already been changed. Refresh and try again.", "booking_changed");
+    }
 
     const query = await buildSlotQuery(ctx, tx, loaded, window.from, window.to, {
       calendarBusy,
@@ -202,11 +217,13 @@ export async function cancelBooking(
   opts: { by: "host" | "invitee" | "admin"; reason?: string; actor: AuditActor },
 ): Promise<BookingRow> {
   if (booking.status === "cancelled") throw conflict("This booking is already cancelled", "already_cancelled");
+  // Conditional update, so a cancel racing another cancel or a reschedule only takes effect once.
   const [updated] = await ctx.db
     .update(bookings)
     .set({ status: "cancelled", cancelledBy: opts.by, cancelReason: opts.reason?.slice(0, 1000) ?? null, updatedAt: new Date() })
-    .where(eq(bookings.id, booking.id))
+    .where(and(eq(bookings.id, booking.id), eq(bookings.status, "confirmed")))
     .returning();
+  if (!updated) throw conflict("This booking is already cancelled", "already_cancelled");
   await ctx.calendars.deleteBookingEvents(booking.id);
   await enqueue(ctx.db, "email.booking", { bookingId: booking.id, kind: "cancelled" }, { dedupeKey: `email:${booking.id}:cancelled` });
   await emitBookingEvent(ctx, "booking.cancelled", booking.id);
