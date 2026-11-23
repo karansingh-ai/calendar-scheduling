@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { isValidTimeZone, validateSchedule } from "@scheduler/core";
+import { isValidTimeZone, validateSchedule } from "@timebook/core";
 import { actor, currentUser, type AppEnv } from "../auth/middleware";
 import { schedules } from "../db/schema";
 import { badRequest, conflict, notFound, parseBody } from "../lib/http";

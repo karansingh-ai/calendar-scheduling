@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts Scheduler in a dev container. In a Codespace, APP_URL is set to the forwarded port's public
+# Starts Timebook in a dev container. In a Codespace, APP_URL is set to the forwarded port's public
 # address so sign-in cookies and links work. Data lives in ./data (embedded PostgreSQL).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,5 +15,5 @@ if [ ! -f .env ]; then
   echo "Created .env with APP_URL=$url"
 fi
 
-echo "Starting Scheduler on port 3000. Open the forwarded port, then create the owner account."
+echo "Starting Timebook on port 3000. Open the forwarded port, then create the owner account."
 exec npm start

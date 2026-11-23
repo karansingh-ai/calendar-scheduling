@@ -7,7 +7,7 @@ import { randomToken, sha256 } from "../lib/crypto";
 import { forbidden, HttpError, unauthorized } from "../lib/http";
 import type { UserRow } from "../services/users";
 
-export const SESSION_COOKIE = "sched_session";
+export const SESSION_COOKIE = "timebook_session";
 
 export type AppEnv = {
   Variables: {

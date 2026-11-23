@@ -628,7 +628,7 @@ describe("Google sign-in", () => {
   });
 
   it("uses Render's public URL when APP_URL is not set", () => {
-    expect(loadConfig({ RENDER_EXTERNAL_URL: "https://scheduler-abc.onrender.com" }).APP_URL).toBe("https://scheduler-abc.onrender.com");
+    expect(loadConfig({ RENDER_EXTERNAL_URL: "https://timebook-abc.onrender.com" }).APP_URL).toBe("https://timebook-abc.onrender.com");
     expect(loadConfig({ APP_URL: "https://cal.acme.com", RENDER_EXTERNAL_URL: "https://x.onrender.com" }).APP_URL).toBe("https://cal.acme.com");
   });
 

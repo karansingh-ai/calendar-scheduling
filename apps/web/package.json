@@ -1,5 +1,5 @@
 {
-  "name": "@scheduler/web",
+  "name": "@timebook/web",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",

@@ -1,5 +1,5 @@
 {
-  "name": "scheduler",
+  "name": "timebook",
   "version": "0.1.0",
   "private": true,
   "description": "Open-source, self-hostable scheduling for teams. A Calendly alternative you can run inside your company.",
@@ -13,13 +13,13 @@
     "node": ">=20.12"
   },
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w @scheduler/server\" \"npm run dev -w @scheduler/web\"",
-    "build": "npm run build -w @scheduler/web && npm run build -w @scheduler/server",
+    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w @timebook/server\" \"npm run dev -w @timebook/web\"",
+    "build": "npm run build -w @timebook/web && npm run build -w @timebook/server",
     "start": "node apps/server/dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p packages/core && tsc -p apps/server && tsc -p apps/web",
-    "db:generate": "npm run db:generate -w @scheduler/server",
+    "db:generate": "npm run db:generate -w @timebook/server",
     "format": "prettier --write ."
   },
   "devDependencies": {

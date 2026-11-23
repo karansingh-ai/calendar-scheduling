@@ -7,7 +7,7 @@ The full OpenAPI 3.1 spec is served at `/api/openapi.yaml` (source: `apps/server
 Create a key under **Settings > API keys** and send it as a bearer token:
 
 ```bash
-curl -H "Authorization: Bearer $SCHEDULER_KEY" https://schedule.acme.com/api/v1/me
+curl -H "Authorization: Bearer $TIMEBOOK_KEY" https://schedule.acme.com/api/v1/me
 ```
 
 Keys act as the user who created them and can be revoked at any time. Keys cannot create other keys.
@@ -17,7 +17,7 @@ Keys act as the user who created them and can be revoked at any time. Keys canno
 List upcoming bookings:
 
 ```bash
-curl -H "Authorization: Bearer $SCHEDULER_KEY" \
+curl -H "Authorization: Bearer $TIMEBOOK_KEY" \
   "https://schedule.acme.com/api/v1/bookings?status=upcoming&limit=50"
 ```
 
@@ -35,7 +35,7 @@ curl -X POST "https://schedule.acme.com/api/public/event-types/$ET/bookings" \
 Ask why times are unavailable (authenticated; useful when someone says "your calendar looks empty but I can't book"):
 
 ```bash
-curl -H "Authorization: Bearer $SCHEDULER_KEY" \
+curl -H "Authorization: Bearer $TIMEBOOK_KEY" \
   "https://schedule.acme.com/api/v1/event-types/$ET/slots?start=2026-12-02T00:00:00Z&end=2026-12-03T00:00:00Z&debug=true"
 ```
 
@@ -82,25 +82,25 @@ Respond with any 2xx status within 10 seconds. Other responses are retried with 
 Inline:
 
 ```html
-<div data-scheduler-url="https://schedule.acme.com/jane/intro-call" style="min-width:320px;height:700px"></div>
+<div data-timebook-url="https://schedule.acme.com/jane/intro-call" style="min-width:320px;height:700px"></div>
 <script src="https://schedule.acme.com/embed.js" async></script>
 ```
 
 Popup button:
 
 ```html
-<button data-scheduler-popup="https://schedule.acme.com/team/sales/demo">Book a demo</button>
+<button data-timebook-popup="https://schedule.acme.com/team/sales/demo">Book a demo</button>
 <script src="https://schedule.acme.com/embed.js" async></script>
 ```
 
-JavaScript API: `Scheduler.inline({ url, parent, prefill })`, `Scheduler.popup({ url })`, `Scheduler.close()`.
+JavaScript API: `Timebook.inline({ url, parent, prefill })`, `Timebook.popup({ url })`, `Timebook.close()`.
 
 The embed dispatches browser events you can forward to analytics:
 
 ```js
-window.addEventListener("scheduler:event_scheduled", (e) => {
+window.addEventListener("timebook:event_scheduled", (e) => {
   analytics.track("Meeting booked", { bookingId: e.detail.booking.id });
 });
 ```
 
-Other events: `scheduler:event_rescheduled`, `scheduler:event_canceled`, `scheduler:page_height` (add `data-scheduler-auto-height` to the container to resize automatically).
+Other events: `timebook:event_rescheduled`, `timebook:event_canceled`, `timebook:page_height` (add `data-timebook-auto-height` to the container to resize automatically).

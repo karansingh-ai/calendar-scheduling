@@ -43,9 +43,9 @@ The app runs database migrations automatically on start.
 ### Container only (existing PostgreSQL)
 
 ```bash
-docker build -t scheduler .
-docker run -d --name scheduler -p 3000:3000 --env-file .env \
-  -e DATABASE_URL=postgres://user:pass@db.internal:5432/scheduler scheduler
+docker build -t timebook .
+docker run -d --name timebook -p 3000:3000 --env-file .env \
+  -e DATABASE_URL=postgres://user:pass@db.internal:5432/timebook timebook
 ```
 
 Tagged releases also publish `ghcr.io/<owner>/<repo>:<version>` (see `.github/workflows/release.yml`).

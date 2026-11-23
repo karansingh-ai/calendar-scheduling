@@ -1,7 +1,7 @@
 import { and, desc, asc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { isValidTimeZone } from "@scheduler/core";
+import { isValidTimeZone } from "@timebook/core";
 import { actor, currentUser, isAdmin, type AppEnv } from "../auth/middleware";
 import { bookingHosts, bookings, eventTypes } from "../db/schema";
 import { forbidden, notFound, parseBody, parseQuery } from "../lib/http";

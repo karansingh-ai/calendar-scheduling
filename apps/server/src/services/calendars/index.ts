@@ -1,4 +1,4 @@
-import type { Interval } from "@scheduler/core";
+import type { Interval } from "@timebook/core";
 import { and, eq, inArray } from "drizzle-orm";
 import type { Config } from "../../config";
 import type { Db } from "../../db";

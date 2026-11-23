@@ -1,4 +1,4 @@
-import type { Interval } from "@scheduler/core";
+import type { Interval } from "@timebook/core";
 
 export interface ExternalCalendar {
   externalId: string;

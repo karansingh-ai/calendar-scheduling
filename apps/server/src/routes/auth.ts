@@ -2,7 +2,7 @@ import { and, eq, gt, isNull, lt, ne } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { Hono } from "hono";
 import { z } from "zod";
-import { isValidTimeZone } from "@scheduler/core";
+import { isValidTimeZone } from "@timebook/core";
 import { buildOidcLogin, completeOidcLogin } from "../auth/oidc";
 import { actor, clientIp, createSession, currentUser, destroySession, SESSION_COOKIE, type AppEnv } from "../auth/middleware";
 import { authTokens, oauthStates, orgSettings, sessions, users } from "../db/schema";

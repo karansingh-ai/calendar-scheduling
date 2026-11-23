@@ -1,4 +1,4 @@
-import { DEFAULT_WEEKLY } from "@scheduler/core";
+import { DEFAULT_WEEKLY } from "@timebook/core";
 import { eq, sql } from "drizzle-orm";
 import type { Db } from "../db";
 import { orgSettings, schedules, users, type Role } from "../db/schema";

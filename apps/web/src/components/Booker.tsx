@@ -22,7 +22,7 @@ export interface BookerResult {
 
 /** Post a message to the embedding page (see public/embed.js). */
 export function notifyParent(type: string, payload: Record<string, unknown> = {}) {
-  if (window.parent !== window) window.parent.postMessage({ type: `scheduler:${type}`, ...payload }, "*");
+  if (window.parent !== window) window.parent.postMessage({ type: `timebook:${type}`, ...payload }, "*");
 }
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

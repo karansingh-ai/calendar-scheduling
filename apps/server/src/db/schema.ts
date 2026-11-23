@@ -12,7 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { BookingWindow, DateOverride, EventKind, RoundRobinStrategy, WeeklyRule } from "@scheduler/core";
+import type { BookingWindow, DateOverride, EventKind, RoundRobinStrategy, WeeklyRule } from "@timebook/core";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 const created = () => ts("created_at").notNull().defaultNow();

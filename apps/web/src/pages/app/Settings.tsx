@@ -157,7 +157,7 @@ function Webhooks() {
       {secret && <SecretReveal label="Signing secret. Store it now; it will not be shown again." secret={secret} onDone={() => setSecret(null)} />}
       <form onSubmit={create} className="space-y-3">
         <Field label="Endpoint URL">
-          <Input type="url" value={url} onChange={(e) => setUrl(e.target.value)} required placeholder="https://example.com/webhooks/scheduler" />
+          <Input type="url" value={url} onChange={(e) => setUrl(e.target.value)} required placeholder="https://example.com/webhooks/timebook" />
         </Field>
         <div className="flex flex-wrap gap-4 text-sm">
           {EVENTS.map((ev) => (

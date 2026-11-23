@@ -7,7 +7,7 @@ All configuration is through environment variables. Invalid values stop the serv
 | Variable | Default | Description |
 |---|---|---|
 | `APP_URL` | `http://localhost:3000` | Public base URL. Used for links, emails, OAuth redirects and CSRF origin checks. |
-| `APP_NAME` | `Scheduler` | Product name in the UI and emails. |
+| `APP_NAME` | `Timebook` | Product name in the UI and emails. |
 | `DATABASE_URL` | `pglite://./data/pglite` | `postgres://user:pass@host:5432/db` for production. `pglite://<dir>` runs an embedded PostgreSQL stored on disk (trials, small teams). `memory://` is for tests. |
 | `ENCRYPTION_KEY` | none (required in production) | Secret for AES-256-GCM encryption of OAuth tokens, ICS URLs and webhook secrets. Generate with `openssl rand -hex 32`. |
 | `PORT` | `3000` | HTTP port. |

@@ -12,7 +12,7 @@ describe("buildIcs", () => {
       summary: "Intro\r\nATTENDEE:mailto:evil@example.com",
       organizer: { name: "Host", email: "host@example.com" },
       attendees: [{ name: 'Jane\r\nATTENDEE;CN=Evil:mailto:evil@example.com\r\nX-"', email: "jane@example.com\r\nX-EVIL:1" }],
-      productName: "Scheduler",
+      productName: "Timebook",
     });
     const lines = ics.replace(/\r\n /g, "").split("\r\n");
     expect(lines.filter((l) => l.startsWith("ATTENDEE"))).toHaveLength(1);

@@ -1,4 +1,4 @@
-import type { Interval } from "@scheduler/core";
+import type { Interval } from "@timebook/core";
 import { decodeJwtPayload, expectOk, type FetchFn, type OAuthCalendarProvider, type TokenSet } from "./types";
 
 const GRAPH = "https://graph.microsoft.com/v1.0";

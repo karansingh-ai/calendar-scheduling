@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
-import { isValidTimeZone } from "@scheduler/core";
+import { isValidTimeZone } from "@timebook/core";
 import { actor, currentUser, requireSession, type AppEnv } from "../auth/middleware";
 import { apiKeys, users, webhookDeliveries, webhooks } from "../db/schema";
 import { randomToken, sha256 } from "../lib/crypto";

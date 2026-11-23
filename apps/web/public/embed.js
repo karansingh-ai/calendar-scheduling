@@ -1,19 +1,19 @@
 /*!
- * Scheduler embed script (Apache-2.0).
+ * Timebook embed script (Apache-2.0).
  *
- * Inline:  <div data-scheduler-url="https://cal.example.com/jane/intro" style="height:700px"></div>
+ * Inline:  <div data-timebook-url="https://cal.example.com/jane/intro" style="height:700px"></div>
  *          <script src="https://cal.example.com/embed.js" async></script>
  *
- * Popup:   <button data-scheduler-popup="https://cal.example.com/jane/intro">Book a call</button>
+ * Popup:   <button data-timebook-popup="https://cal.example.com/jane/intro">Book a call</button>
  *
- * JS API:  Scheduler.inline({ url, parent }) / Scheduler.popup({ url }) / Scheduler.close()
+ * JS API:  Timebook.inline({ url, parent }) / Timebook.popup({ url }) / Timebook.close()
  *
  * Events are re-dispatched on window as CustomEvents:
- *   scheduler:event_scheduled  detail: { booking: { id, start, end, invitee } }
- *   scheduler:event_rescheduled, scheduler:event_canceled, scheduler:page_height
+ *   timebook:event_scheduled  detail: { booking: { id, start, end, invitee } }
+ *   timebook:event_rescheduled, timebook:event_canceled, timebook:page_height
  */
 (function () {
-  if (window.Scheduler && window.Scheduler.__loaded) return;
+  if (window.Timebook && window.Timebook.__loaded) return;
 
   var frames = [];
   var overlay = null;
@@ -42,7 +42,7 @@
 
   function inline(opts) {
     var parent = typeof opts.parent === "string" ? document.querySelector(opts.parent) : opts.parent;
-    if (!parent) throw new Error("Scheduler.inline: parent element not found");
+    if (!parent) throw new Error("Timebook.inline: parent element not found");
     parent.innerHTML = "";
     parent.appendChild(makeFrame(opts.url, opts.prefill));
   }
@@ -85,34 +85,34 @@
 
   window.addEventListener("message", function (e) {
     var data = e.data;
-    if (!data || typeof data.type !== "string" || data.type.indexOf("scheduler:") !== 0) return;
+    if (!data || typeof data.type !== "string" || data.type.indexOf("timebook:") !== 0) return;
     var from = frames.filter(function (f) {
       return f.contentWindow === e.source;
     })[0];
     if (!from) return;
-    if (data.type === "scheduler:page_height" && data.height && from.parentElement && from.parentElement.hasAttribute("data-scheduler-auto-height")) {
+    if (data.type === "timebook:page_height" && data.height && from.parentElement && from.parentElement.hasAttribute("data-timebook-auto-height")) {
       from.style.height = data.height + "px";
     }
     window.dispatchEvent(new CustomEvent(data.type, { detail: data }));
   });
 
   function init() {
-    document.querySelectorAll("[data-scheduler-url]").forEach(function (el) {
-      if (el.__schedulerInit) return;
-      el.__schedulerInit = true;
-      inline({ url: el.getAttribute("data-scheduler-url"), parent: el });
+    document.querySelectorAll("[data-timebook-url]").forEach(function (el) {
+      if (el.__timebookInit) return;
+      el.__timebookInit = true;
+      inline({ url: el.getAttribute("data-timebook-url"), parent: el });
     });
-    document.querySelectorAll("[data-scheduler-popup]").forEach(function (el) {
-      if (el.__schedulerInit) return;
-      el.__schedulerInit = true;
+    document.querySelectorAll("[data-timebook-popup]").forEach(function (el) {
+      if (el.__timebookInit) return;
+      el.__timebookInit = true;
       el.addEventListener("click", function (e) {
         e.preventDefault();
-        popup({ url: el.getAttribute("data-scheduler-popup") });
+        popup({ url: el.getAttribute("data-timebook-popup") });
       });
     });
   }
 
-  window.Scheduler = { inline: inline, popup: popup, close: close, init: init, __loaded: true };
+  window.Timebook = { inline: inline, popup: popup, close: close, init: init, __loaded: true };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();

@@ -16,7 +16,7 @@ const schema = z.object({
   /** Public base URL, used in links, OAuth redirects and emails. Defaults to RENDER_EXTERNAL_URL on Render. */
   APP_URL: z.string().url().default("http://localhost:3000"),
   /** Product name shown in the UI and emails. Companies can white-label here. */
-  APP_NAME: z.string().default("Scheduler"),
+  APP_NAME: z.string().default("Timebook"),
   /** postgres://... for production, or pglite://<dir> / memory:// for an embedded database. */
   DATABASE_URL: z.string().default("pglite://./data/pglite"),
   /** Secret used to encrypt OAuth tokens and webhook secrets at rest. Required in production. */

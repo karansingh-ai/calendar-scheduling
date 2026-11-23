@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { isValidTimeZone } from "@scheduler/core";
+import { isValidTimeZone } from "@timebook/core";
 import { actor, currentUser, isAdmin, type AppEnv } from "../auth/middleware";
 import type { Db } from "../db";
 import { eventTypeHosts, eventTypes, schedules, teamMembers, users } from "../db/schema";

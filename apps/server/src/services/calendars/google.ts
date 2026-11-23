@@ -1,4 +1,4 @@
-import type { Interval } from "@scheduler/core";
+import type { Interval } from "@timebook/core";
 import { decodeJwtPayload, expectOk, type FetchFn, type OAuthCalendarProvider, type TokenSet } from "./types";
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";

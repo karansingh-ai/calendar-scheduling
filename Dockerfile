@@ -21,7 +21,7 @@ COPY package.json package-lock.json ./
 COPY packages/core/package.json packages/core/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-RUN npm ci --omit=dev --workspace @scheduler/server && npm cache clean --force
+RUN npm ci --omit=dev --workspace @timebook/server && npm cache clean --force
 
 COPY --from=build /app/apps/server/dist apps/server/dist
 COPY --from=build /app/apps/server/drizzle apps/server/drizzle

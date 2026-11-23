@@ -19,7 +19,7 @@ The server reads a `.env` file from the repository root if present (real environ
 
 ```bash
 npm test                     # engine unit tests + full API integration tests (embedded PostgreSQL)
-TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/scheduler_test npm test   # against real PostgreSQL (the database is wiped)
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/timebook_test npm test   # against real PostgreSQL (the database is wiped)
 npm run typecheck
 ```
 
@@ -50,7 +50,7 @@ apps/web/src
 Edit `apps/server/src/db/schema.ts`, then:
 
 ```bash
-npm run db:generate -w @scheduler/server -- --name short_description
+npm run db:generate -w @timebook/server -- --name short_description
 ```
 
 Commit the generated SQL in `apps/server/drizzle`. Migrations must be forward-only and safe to run on a live database.

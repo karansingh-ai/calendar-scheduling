@@ -1,4 +1,4 @@
-import { assignRoundRobin, computeSlots, isSlotAvailable, type Slot } from "@scheduler/core";
+import { assignRoundRobin, computeSlots, isSlotAvailable, type Slot } from "@timebook/core";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AppContext } from "../context";
 import { bookingHosts, bookings, users, type BookingLocation, type EventQuestion } from "../db/schema";

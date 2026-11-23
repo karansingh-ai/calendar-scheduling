@@ -1,4 +1,4 @@
-import { computeSlots, DAY, type HostInput, type Interval, type SlotQuery, type SlotResult } from "@scheduler/core";
+import { computeSlots, DAY, type HostInput, type Interval, type SlotQuery, type SlotResult } from "@timebook/core";
 import { and, eq, gt, inArray, lt, ne, sql } from "drizzle-orm";
 import type { AppContext } from "../context";
 import type { Db } from "../db";

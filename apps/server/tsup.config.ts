@@ -9,5 +9,5 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   // Bundle the workspace package (shipped as TypeScript); keep npm dependencies external.
-  noExternal: ["@scheduler/core"],
+  noExternal: ["@timebook/core"],
 });

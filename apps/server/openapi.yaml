@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
-  title: Scheduler API
+  title: Timebook API
   version: 0.1.0
   license:
     name: Apache-2.0
     identifier: Apache-2.0
   description: |
-    REST API for the open-source scheduler.
+    REST API for Timebook, open-source scheduling for teams.
 
     **Authentication.** Private endpoints (`/api/v1/*`) accept either the browser session cookie or a
     personal API key: `Authorization: Bearer sk_...` (create one under Settings > API keys).
@@ -30,7 +30,7 @@ components:
     session:
       type: apiKey
       in: cookie
-      name: sched_session
+      name: timebook_session
   schemas:
     Error:
       type: object

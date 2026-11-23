@@ -11,7 +11,7 @@ services:
       - "${PORT:-3000}:3000"
     env_file: .env
     environment:
-      DATABASE_URL: postgres://scheduler:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/scheduler
+      DATABASE_URL: postgres://timebook:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/timebook
       PORT: "3000"
     depends_on:
       db:
@@ -21,13 +21,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: scheduler
+      POSTGRES_USER: timebook
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: scheduler
+      POSTGRES_DB: timebook
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U scheduler -d scheduler"]
+      test: ["CMD-SHELL", "pg_isready -U timebook -d timebook"]
       interval: 5s
       timeout: 5s
       retries: 10

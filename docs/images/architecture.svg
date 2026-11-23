@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="t d">
-  <title id="t">Scheduler architecture</title>
+  <title id="t">Timebook architecture</title>
   <desc id="d">Browsers and API clients talk to one Node.js process that serves the web app, the REST API and a background worker. It stores data in PostgreSQL or an embedded database and connects out to calendars, SSO, email and webhooks.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">

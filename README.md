@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/banner.svg" alt="Scheduler: open-source scheduling for teams" width="100%">
+  <img src="docs/images/banner.svg" alt="Timebook: open-source scheduling for teams" width="100%">
 </p>
 
 <p align="center">
@@ -37,9 +37,9 @@
 
 ## Why
 
-Hosted schedulers keep the features companies actually need (single sign-on, audit logs, data residency) behind enterprise contracts, and keep every meeting in their cloud. Scheduler ships those controls in the open-source core, so any team can run it on its own infrastructure, in its own region, next to its own identity provider.
+Hosted schedulers keep the features companies actually need (single sign-on, audit logs, data residency) behind enterprise contracts, and keep every meeting in their cloud. Timebook ships those controls in the open-source core, so any team can run it on its own infrastructure, in its own region, next to its own identity provider.
 
-> "Scheduler" is a working name. Set `APP_NAME` to show your own product name in the UI and emails.
+> Running it for your company? Set `APP_NAME` to show your own product name in the UI and emails.
 
 ## 📸 Screenshots
 

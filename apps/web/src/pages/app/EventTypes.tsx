@@ -184,7 +184,7 @@ export function EventTypeEditorPage() {
 
   const url = !isNew && existing.data ? publicUrl(existing.data.eventType, user.username, teams.data?.teams ?? []) : null;
   const embedCode = url
-    ? `<div data-scheduler-url="${url}" style="min-width:320px;height:700px"></div>\n<script src="${window.location.origin}/embed.js" async></script>`
+    ? `<div data-timebook-url="${url}" style="min-width:320px;height:700px"></div>\n<script src="${window.location.origin}/embed.js" async></script>`
     : "";
 
   return (
@@ -462,7 +462,7 @@ export function EventTypeEditorPage() {
         </Section>
 
         {embedCode && (
-          <Section title="Embed on your website" description="Paste this where the scheduler should appear. Listen for the `scheduler:event_scheduled` event to react to bookings.">
+          <Section title="Embed on your website" description="Paste this where the booking page should appear. Listen for the `timebook:event_scheduled` event to react to bookings.">
             <pre className="overflow-x-auto rounded-md bg-gray-900 p-3 text-xs text-gray-100">{embedCode}</pre>
             <CopyButton text={embedCode} label="Copy embed code" />
           </Section>

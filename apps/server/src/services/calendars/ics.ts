@@ -1,4 +1,4 @@
-import type { Interval } from "@scheduler/core";
+import type { Interval } from "@timebook/core";
 import ical from "node-ical";
 import { guardedFetch, readTextLimited, type ResolveHost } from "../../lib/outbound";
 import type { FetchFn } from "./types";

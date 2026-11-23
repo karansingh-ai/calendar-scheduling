@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="t d">
-  <title id="t">Scheduler</title>
+  <title id="t">Timebook</title>
   <desc id="d">Open-source scheduling for teams. Booking pages, round robin, calendar sync, SSO and an audit log, self-hosted.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -31,7 +31,7 @@
     <line x1="103" y1="76" x2="103" y2="86"/>
   </g>
   <circle cx="96" cy="102" r="3.5" fill="#fff"/>
-  <text x="148" y="117" class="title">Scheduler</text>
+  <text x="148" y="117" class="title">Timebook</text>
   <text x="64" y="178" class="tag">Open-source scheduling for teams.</text>
   <text x="64" y="208" class="tag">Self-host it next to your identity provider, in your own region.</text>
 
